@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load extra_tags %}
+
+{% block title %}{% if show_home_page %}"{{current_tag}}" datasets -- OpenMV.net{% else %}All OpenMV.net Datasets{% endif %}{% endblock %}
+
+{% block body %}
+<div id="special_message">{{ special_message|safe|escape }}</div>
+
+{% if show_home_page %}
+<h3>Showing data sets with "{{current_tag}}" tag</h3>
+<span class="dataset-tag-right"><a href="{% url 'dataset-home-page' %}">Back to all datasets</a></span>
+<br>
+<span class="dataset-tag-left">{{current_tag_description}}</span>
+{% endif %}
+
+<br>
+<div class="dataset-results">
+
+<table class="wikitable sortable">
+<thead class="dataset-header">
+    <td style="padding-right: 10px;">Name</td>
+    <td>Description</td>
+    <td style="padding-left: 10px; padding-right: 10px;" id="rows">Rows</td>
+    <td style="padding-left: 10px; padding-right: 10px;" id="cols">Columns</td>
+    <!-- <td>Download</td> -->
+    <td style="text-align:left">Tags</td>
+</thead>
+{% for dataset in dataset_list %}
+{% spaceless %}
+    <tr class="{% cycle 'row-odd' 'row-even' %} dataset-row">
+        <td style="padding-right: 10px;" width="20%"><a href="/info/{{dataset.slug }}">{{ dataset.name }}</a>
+        <td width="80%">{{dataset.description|removetags:"a"|safe}}</td>
+        <td class="dataset-rows" width="8%">{{dataset.rows}}</td>
+        <td class="dataset-cols" width="10%">{{dataset.cols}}</td>
+        <!-- <td class="dataset-download"><a href="/file/{{ dataset.link_to_file.name|slice_string:"9:" }}">{{ datafile.file_type }}</a> -->
+	{# for datafile in datafile_list #}
+            {# ifequal datafile.dataset.slug dataset.slug #}
+            {#    <a href="/file/{{ datafile.link_to_file.name|slice_string:"9:" }}">{{ datafile.file_type }}</a> #}
+            {# endifequal #}
+        {# endfor #}
+        <!--</td> -->
+        <td>
+            {% for tag in dataset.tags.all %}
+            <span><a href="/tag/{{tag}}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a></span>
+            {% endfor %}
+        </td>
+    </tr>
+{% endspaceless %}
+{% endfor %}
+</table>
+
+
+</div>
+{% endblock %}

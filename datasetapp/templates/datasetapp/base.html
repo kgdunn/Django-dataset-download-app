@@ -1,0 +1,88 @@
+<head>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<style>
+body {
+    padding: 4px;
+}
+.calculated-width {
+    width: -moz-calc(100% - 100px);
+    width: -webkit-calc(100% - 100px);
+    width: calc(100% - 100px);
+    display: inline-block;
+}
+A{
+	font-size:20px;
+}
+.row {
+	vertical-align: top;
+	padding-top: 4px;
+}
+.td{
+}
+.row-odd{
+    background: #DDDDDD;
+}
+.row-even{
+    background: #FEFEFE;
+}
+.dataset-row{
+    vertical-align: top;
+}
+.dataset-header{
+    font-weight: bold;
+    background-color: #AAAAAA;
+    text-align: center;
+}
+.dataset-tag:hover{
+    background-color: #3E6D8E;
+    color: #E0EAF1;
+}
+.dataset-tag{
+    background-color: #E0EAF1;
+    color: #3E6D8E;
+    border-bottom: 1px solid #37607D;
+    border-right: 1px solid #37607D;
+    text-decoration: none;
+    padding: 3px 4px 3px 4px;
+    margin: 2px 2px 2px 0;
+    font-size: 90%;
+    line-height: 2.4;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.dataset-rows, .dataset-cols, .dataset-download{
+    text-align: center;
+    vertical-align: top;
+}
+.dataset-tag-left{
+    float: left;
+}
+.dataset-tag-right{
+    float: right;
+}
+.dataset-results{
+    display: block;
+}
+
+#dataset-content{
+    float: left;
+    width: 65%;
+}
+#dataset-download{
+    width: 25%;
+    float: right;
+}
+.dataset-title{
+    width: 30%;
+    vertical-align: top;
+}
+</style>
+<title>{% block title%}{% endblock %}</title>
+</head>
+<body>
+<div class="well calculated-width">
+<h1>OpenMV.net Datasets</h1>
+{% block body %}{% endblock %}
+</div>
+<div>(c) Kevin Dunn, <a style="font-size: 14px;"href="http://learnche.org">learnche.org</a></div>
+</body>

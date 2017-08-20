@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load extra_tags %}
+
+{% block title %}{{ds.name|safe}}-OpenMV.net Datasets{% endblock %}
+{% block body %}
+<span class="dataset-tag-right"><a href="{% url 'dataset-home-page' %}">Back to all datasets</a></span>
+
+<h3>{{ds.name}}</h3>
+<div id="dataset-content">
+<table>
+<tr><td class="dataset row" width="25%">Description:</td><td>{{ds.description|safe}}</td></tr>
+<tr><td class="dataset row">Data source:</td><td>{{ds.data_source|safe}}</td></tr>
+<tr><td class="dataset row">Data shape:</td><td>{{ds.rows}} rows and {{ds.cols}} columns</td></tr>
+<tr><td class="dataset row">Usage restrictions:</td><td>{{ds.usage_restrictions}}</td></tr>
+<tr><td class="dataset row">Contact person:</td><td>{{ds.author_name}}</td></tr>
+<tr><td class="dataset row">Contact details:</td><td>{{ds.author_email}}</td></tr>
+<tr><td class="dataset row">Added here on:</td><td>{{ds.created_on|date:"d F Y G:i"}}</td></tr>
+<tr><td class="dataset row">Last updated:</td><td>{{ds.updated_on|date:"d F Y G:i"}}</td></tr>
+</table>
+</div>
+<div id="dataset-download">
+
+    <h4>Download</h4>        
+        
+        <a href="/file/{{ dfile.link_to_file.name|slice_string:"15:" }}">{{ dfile.file_type }}</a>
+        ({{dfile.link_to_file.size|filesizeformat}}) &nbsp;&nbsp;&nbsp;&nbsp; [{{num_hits}} download{{num_hits|pluralize}}]
+   
+        <p>(Right-click link; choose "<i>Save Link As</i>")
+
+    <h4>Tags for this dataset</h4>
+    {% for tag in ds.tags.all %}
+        <span><a href="/tag/{{tag}}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a></span>
+    {% endfor %}
+
+</div>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<!-- Have a link to go to Next and Previous dataset -->
+{% endblock %}

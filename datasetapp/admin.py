@@ -3,11 +3,13 @@ from django.contrib import admin
 
 class DatasetAdmin(admin.ModelAdmin):
     list_per_page = 2000
-    list_display = ('name', 'slug', 'author_name', 'is_hidden', 'usage_restrictions', 'data_source', )
+    list_display = ('name', 'slug', 'author_name', 'is_hidden',
+                    'usage_restrictions', 'data_source', )
 
 class HitAdmin(admin.ModelAdmin):
     list_per_page = 2000
-    list_display = ('UA_string', 'dataset_hit', 'date_and_time', 'IP_address', 'referrer',)
+    list_display = ('UA_string', 'dataset_hit', 'date_and_time',
+                    'IP_address', 'referrer',)
     list_filter = ('UA_string', 'IP_address', 'dataset_hit', )
 
 class DataFileAdmin(admin.ModelAdmin):

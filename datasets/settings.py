@@ -23,9 +23,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'ni+=0q_uu%6ik8egnlqbxd(0xe6&vmzhrjf$z###d4y4ss^!jv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False     # If False, also set "ALLOWED_HOSTS" below
+DEBUG = True     # If False, also set "ALLOWED_HOSTS" below
 ALLOWED_HOSTS = [
-	'.openmv.net'
+	'.openmv.net',
+    '127.0.0.1',
 ]
 
 
@@ -60,9 +61,10 @@ ROOT_URLCONF = 'datasets.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['/var/django/datasets/datasetapp/templates/datasetapp'],
+        'DIRS': [], #['/var/django/datasets/datasetapp/templates/datasetapp'],
         'APP_DIRS': True,
         'OPTIONS': {
+            'debug': True,
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -81,9 +83,9 @@ WSGI_APPLICATION = 'datasets.wsgi.application'
 
 DATABASES = {
     'default': {
-        #'ENGINE': 'django.db.backends.sqlite3',
-        #'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        #'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'django_datasets',
         'USER': 'django_datasets_user',
         'PASSWORD': ',QVb!QCl0H4{FvW7a&IW',

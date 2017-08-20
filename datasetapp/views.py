@@ -68,16 +68,16 @@ def display_by_tag(request, tag):
     log_file.debug('Tag view for tag=%s' % tag)
     dataset_list = Dataset.objects.filter(tags__name__startswith=tag)
     template = loader.get_template('all_datasets.html')
-    
-    context = RequestContext(request, {
+
+    context = {
             'dataset_list': dataset_list,
             'show_home_page': True,
             'current_tag': tag,
-            'current_tag_description': Tag.objects.get(name__exact=tag).description,   
-        })
-    return HttpResponse(template.render(context))     
+            'current_tag_description': Tag.objects.get(name__exact=tag).description,
+        }
+    return HttpResponse(template.render(context))
 
-    
+
 def display_all(request):
     """
     Displays all datasets in a table form, with brief summaries.
@@ -85,15 +85,14 @@ def display_all(request):
     # django-name='dataset-home-page'
     dataset_list = Dataset.objects.order_by('slug')[:]
     template = loader.get_template('all_datasets.html')
-    context = RequestContext(request, {
-            'dataset_list': dataset_list,
-            'special_message': (r'<p>You are generally free to use these '
+    context = {'dataset_list': dataset_list,
+               'special_message': (r'<p>You are generally free to use these '
                                 'datasets in any way you like. Please '
                                 'click on the dataset name to find out '
                                 'more information about it.'
-                                '<p>All data sets are used in the book <a href=http://learnche.org/pid>"Process Improvement using Data"</a>'),     
-        })
-    return HttpResponse(template.render(context))    
+                                '<p>All data sets are used in the book <a href=http://learnche.org/pid>"Process Improvement using Data"</a>'),
+        }
+    return HttpResponse(template.render(context))
 
 
 def about_dataset(request, dataset_name=None):
@@ -111,13 +110,13 @@ def about_dataset(request, dataset_name=None):
 
     files = DataFile.objects.filter(dataset=ds[0])
     template = loader.get_template('dataset_info.html')
-    context = RequestContext(request, {
+    context = {
                 'ds': ds[0],
                 'dfile':  files[0],
                 'num_hits': Hit.objects.filter(dataset_hit=files[0]).count(),
-                 
-            })
-    return HttpResponse(template.render(context))        
+
+            }
+    return HttpResponse(template.render(context))
 
 
 def download_dataset(request, file_name=None):
@@ -127,7 +126,7 @@ def download_dataset(request, file_name=None):
 
     We arrive by: http://localhost/file/cheddar-cheese.csv
     We redirect the user to http://localhost/media/datasets/cheddar-cheese.csv
-    Make sure your Apache settings are set to intercept that request before it hits Django 
+    Make sure your Apache settings are set to intercept that request before it hits Django
 
     """
     # django-name='dataset-download'

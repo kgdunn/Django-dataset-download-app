@@ -9,6 +9,13 @@ https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 
 import os
 
+import os
+
+from django.core.wsgi import get_wsgi_application
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "datasets.settings")
+
+application = get_wsgi_application()
 
 
 #import logging.handlers
@@ -19,15 +26,15 @@ import os
 #fh.setFormatter(formatter)
 #log_file.addHandler(fh)
 #log_file.debug('Starting WSGI')
-import sys
+#import sys
 #log_file.debug('PATH = %s' % str(sys.path))
-print('PATH = %s' % str(sys.path))
+#print('PATH = %s' % str(sys.path))
 
-from django.core.wsgi import get_wsgi_application
+#from django.core.wsgi import get_wsgi_application
 
 #WSGIPythonPath    /var/django/datasets:./anaconda3/lib/python3.4/site-packages
 
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "datasets.settings")
+#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "datasets.settings")
 
-application = get_wsgi_application()
+#application = get_wsgi_application()

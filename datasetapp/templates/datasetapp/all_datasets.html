@@ -30,7 +30,7 @@ Datasets{% endif %}{% endblock %}
         {% spaceless %}
         <tr class="{% cycle 'row-odd' 'row-even' %} dataset-row">
             <td style="padding-right: 10px;" width="20%"><a href="/info/{{dataset.slug }}">{{ dataset.name }}</a>
-            <td width="80%">{{dataset.description}}</td>
+            <td width="80%">{{dataset.description|striptags}}</td>
             <td class="dataset-rows" width="8%">{{dataset.rows}}</td>
             <td class="dataset-cols" width="10%">{{dataset.cols}}</td>
             <!-- <td class="dataset-download"><a href="/file/{{ dataset.link_to_file.name|slice_string:"9:" }}">{{ datafile.file_type }}</a> -->

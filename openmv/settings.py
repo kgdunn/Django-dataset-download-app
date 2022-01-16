@@ -148,8 +148,6 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / STATIC_URL.strip("/")
-if not DEBUG:
-    MEDIA_ROOT = "/var/www/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

@@ -47,7 +47,7 @@
     <h4>Download</h4>
 
     <a href="/file/{{ dfile.link_to_file.name|slice_string:"15:" }}">{{ dfile.file_type }}</a>
-    ({{dfile.link_to_file.size|filesizeformat}}) &nbsp;&nbsp;&nbsp;&nbsp; [{{num_hits}} download{{num_hits|pluralize}}]
+    &nbsp;&nbsp;&nbsp;&nbsp; [{{num_hits}} download{{num_hits|pluralize}}]
 
     <p>(Right-click link; choose "<i>Save Link As</i>")
 

@@ -115,7 +115,7 @@ class DataFile(models.Model):
     dataset = models.ForeignKey(Dataset, on_delete=models.PROTECT)
 
     def __str__(self):
-        return "{self.file_type}  :  {self.link_to_file}"
+        return f"{self.file_type}  :  {self.link_to_file}"
 
 
 class Hit(models.Model):

@@ -13,12 +13,14 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
-dotenv_file = "/var/django/openmv/.env"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+dotenv_file = BASE_DIR / ".env"
 assert Path(dotenv_file).parent.exists(), f"{dotenv_file} directory does not exist"
 assert Path(dotenv_file).exists(), f"{dotenv_file} does not exist"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = dotenv_values(dotenv_path=dotenv_file).get("SECRET_KEY", None)
@@ -146,6 +148,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / STATIC_URL.strip("/")
+if not DEBUG:
+    MEDIA_ROOT = "/var/www/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

@@ -3,6 +3,7 @@ from django.template.defaultfilters import stringfilter
 
 register = template.Library()
 
+
 @stringfilter
 def slice_string(value, args):
     """
@@ -18,13 +19,13 @@ def slice_string(value, args):
     {{ 'my_long_string' | slice_string:"8:100" }} will return 'string'
     {{ 'my_long_string' | slice_string:"8:14" }}  will return 'string'
     """
-    sep = ':'
+    sep = ":"
     if args is None:
         return False
-    if ':' not in args:
+    if ":" not in args:
         return value[int(args)]
 
-    slicer = [int(arg.strip()) for arg in args.split(sep) if arg != '']
+    slicer = [int(arg.strip()) for arg in args.split(sep) if arg != ""]
     if args[0] == sep:
         start, end = 0, slicer[0]
     elif args[-1] == sep:
@@ -33,7 +34,8 @@ def slice_string(value, args):
         start, end = slicer
     return value[start:end]
 
+
 # slice_string.is_safe = True: rather leave off; incase use removes part of string
 # that causes it to become unsafe.
 
-register.filter('slice_string', slice_string)
+register.filter("slice_string", slice_string)

@@ -1,2 +1,4 @@
 **/__pycache__
 *.pyc
+alldata.json
+Mac-openmv.code-workspace

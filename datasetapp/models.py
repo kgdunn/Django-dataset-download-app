@@ -4,33 +4,38 @@
 """
 from django.db import models
 
+
 class Tag(models.Model):
     """
     A tag object: each dataset can be tagged.  All tags must have a unique name.
     """
+
     name = models.SlugField(unique=True)
     description = models.CharField(max_length=500)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
+
 
 class DatasetManager(models.Manager):
     def get_query_set(self):
         return super(DatasetManager, self).get_query_set().filter(is_hidden=False)
 
+
 class Dataset(models.Model):
-    """ Defines a dataset instance.
+    """Defines a dataset instance.
 
     Note: each ``Dataset`` instance can have multiple file formats, ``DataFile``
           instances, but each ``DataFile`` can point back only to one dataset.
           So it is a one-to-many relationship using ForeignKey()
     """
+
     objects = DatasetManager()
     usage_choice = (
-        ('None', 'None  '),
-        ('Unknown', 'Unknown'),
-        ('Not-commercial', 'May not be used for commercial purposes'),
-        )
+        ("None", "None  "),
+        ("Unknown", "Unknown"),
+        ("Not-commercial", "May not be used for commercial purposes"),
+    )
 
     # The dataset's displayed name
     name = models.CharField(max_length=500)
@@ -40,7 +45,7 @@ class Dataset(models.Model):
     description = models.TextField()
 
     # Who's responsible for the dataset?
-    author_name =  models.CharField(max_length=250)
+    author_name = models.CharField(max_length=250)
     author_email = models.EmailField(blank=True)
     author_URL = models.URLField(max_length=500, blank=True)
 
@@ -67,13 +72,16 @@ class Dataset(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
-    tags = models.ManyToManyField(Tag, blank=True,)
+    tags = models.ManyToManyField(
+        Tag,
+        blank=True,
+    )
 
-    def __unicode__(self):
-        return u'Dataset slug: %s' % self.slug
+    def __str__(self):
+        return f"Dataset slug: {self.slug}"
 
     class Meta:
-        ordering = ['slug']
+        ordering = ["slug"]
 
 
 class DataFile(models.Model):
@@ -93,32 +101,36 @@ class DataFile(models.Model):
         2. The extension must be one of the entries in ``file_type_choice``
 
     """
+
     # Short name (usually 3 characters) and description on how to use it
     file_type_choice = (
-        ('CSV', 'Comma Separated Value file'),
-        ('XLS', 'Microsoft Excel'),
-        ('XML', 'eXtensible Markup Language'),
-        ('MAT', 'MATLAB MAT file'),
-        )
+        ("CSV", "Comma Separated Value file"),
+        ("XLS", "Microsoft Excel"),
+        ("XML", "eXtensible Markup Language"),
+        ("MAT", "MATLAB MAT file"),
+    )
 
     file_type = models.CharField(choices=file_type_choice, max_length=50)
-    link_to_file = models.FileField(upload_to='datasets/', max_length=500)
-    dataset = models.ForeignKey(Dataset)
+    link_to_file = models.FileField(upload_to="datasets/", max_length=500)
+    dataset = models.ForeignKey(Dataset, on_delete=models.PROTECT)
 
-    def __unicode__(self):
-        return u'%s  :  %s' % (self.file_type, self.link_to_file)
+    def __str__(self):
+        return "{self.file_type}  :  {self.link_to_file}"
+
 
 class Hit(models.Model):
     """
     Tracks dataset hits to a *download* of the dataset (not just to view it)
     """
-    UA_string = models.CharField(max_length=500) # user agent of browser
+
+    UA_string = models.CharField(max_length=500)  # user agent of browser
     IP_address = models.GenericIPAddressField()
     date_and_time = models.DateTimeField(auto_now=True)
-    dataset_hit = models.ForeignKey(DataFile)
+    dataset_hit = models.ForeignKey(DataFile, on_delete=models.PROTECT)
     referrer = models.TextField(max_length=500)
 
-    def __unicode__(self):
-        return u'%s: from IP=%s visited <<%s>> [refer: %s]' % \
-                    (str(self.date_and_time)[0:19], self.IP_address,
-                     self.dataset_hit, self.referrer)
+    def __str__(self):
+        return (
+            f"{str(self.date_and_time)[0:19]}: from IP={self.IP_address} visited "
+            f"<<{self.dataset_hit}>> [refer: {self.referrer}]"
+        )

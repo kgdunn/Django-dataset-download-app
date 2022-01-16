@@ -1,3 +1,4 @@
+.env
 **/__pycache__
 *.pyc
 *json
@@ -5,3 +6,4 @@
 logfile*
 *db.sqlite*
 static/*
+media/*

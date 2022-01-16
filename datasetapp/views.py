@@ -9,14 +9,15 @@ Show the first 10 rows and K columns on the dataset
 Links to go the next and previous datasets
 
 """
+import logging.handlers
+
 # Standard library imports
 import os
-import logging.handlers
 
 # Django imports
 from django.http import HttpResponse, HttpResponseRedirect
-from django.urls import reverse as django_reverse
 from django.template.response import TemplateResponse
+from django.urls import reverse as django_reverse
 
 # Model imports
 from .models import DataFile, Dataset, Hit, Tag
@@ -27,8 +28,12 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOG_FILE_NAME = parent_dir + os.sep + "logfile.log"
 log_file = logging.getLogger("datasetapp")
 log_file.setLevel(logging.DEBUG)
-fh = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, maxBytes=5000000, backupCount=10)
-formatter = logging.Formatter(("%(asctime)s - %(name)s " "- %(levelname)s - %(message)s"))
+fh = logging.handlers.RotatingFileHandler(
+    LOG_FILE_NAME, maxBytes=5000000, backupCount=10
+)
+formatter = logging.Formatter(
+    ("%(asctime)s - %(name)s " "- %(levelname)s - %(message)s")
+)
 fh.setFormatter(formatter)
 log_file.addHandler(fh)
 
@@ -66,7 +71,7 @@ def display_by_tag(request, tag):
 def display_all(request):
     """
     Displays all datasets in a table form, with brief summaries.
-    """    
+    """
     dataset_list = Dataset.objects.order_by("slug")[:]
     context = {
         "dataset_list": dataset_list,
@@ -128,9 +133,9 @@ def download_dataset(request, file_name=None):
         return HttpResponse("File not found", status=404)
 
     try:
-        file_obj = DataFile.objects.filter(dataset=dataset_instance, file_type=extension.upper())[
-            0
-        ]
+        file_obj = DataFile.objects.filter(
+            dataset=dataset_instance, file_type=extension.upper()
+        )[0]
     except IndexError:
         log_file.error(
             "Data set instance exists, but file type (%s) was not "
@@ -155,4 +160,4 @@ def download_dataset(request, file_name=None):
 
     # response = HttpResponse(mimetype='application/' + extension.lower())
     # response['Content-Disposition'] = 'attachment; filename=%s' % file_name
-    return HttpResponseRedirect("/" + file_obj.link_to_file.url)
+    return HttpResponseRedirect(file_obj.link_to_file.url)

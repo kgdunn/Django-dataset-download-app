@@ -83,6 +83,31 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+if DEBUG:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": dotenv_values(dotenv_path=".env").get(
+                "POSTGRES_DB", "db table name here"
+            ),
+            "USER": dotenv_values(dotenv_path=".env").get(
+                "POSTGRES_USER", "db user name here"
+            ),
+            "PASSWORD": dotenv_values(dotenv_path=".env").get(
+                "POSTGRES_PASSWORD", "you guess"
+            ),
+            "HOST": dotenv_values(dotenv_path=".env").get("DB_HOST", ""),
+            "PORT": dotenv_values(dotenv_path=".env").get("DB_PORT", "5432"),
+        }
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

@@ -27,6 +27,12 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --chown=app:app . .
 
+# WORKDIR created /app as root-owned. The COPY --chown above sets ownership
+# on the copied contents, but not on /app itself. Make the working directory
+# writable by the runtime user so the app can create files like logfile.log
+# (datasetapp/views.py opens this at import time via RotatingFileHandler).
+RUN chown app:app /app
+
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

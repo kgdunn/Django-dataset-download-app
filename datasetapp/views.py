@@ -7,6 +7,7 @@ Future enhancements
 Return better 404's
 
 """
+
 import csv
 import datetime
 import io
@@ -144,12 +145,11 @@ def about_dataset(request, dataset_name=None):
     # django-name='dataset-about-a-dataset'
 
     # "slug" is the unique key in the "Dataset" table
-    ds = Dataset.objects.filter(slug=dataset_name.lower())
-    if len(ds) == 0:
+    ds = Dataset.objects.filter(slug=dataset_name.lower()).first()
+    if ds is None:
         log_file.error("An invalid dataset was requested: %s", dataset_name.lower())
         return HttpResponseRedirect(django_reverse("datasetapp:dataset-home-page"))
 
-    ds = ds[0]
     files = DataFile.objects.filter(dataset=ds)
 
     # Prev/next navigation: use the same slug ordering as the homepage table.
@@ -166,10 +166,15 @@ def about_dataset(request, dataset_name=None):
     csv_file = files.filter(file_type__iexact="CSV").first()
     preview_rows = _csv_preview(csv_file) if not ds.is_hidden else None
 
+    # ``download_dataset`` parses its URL as ``{slug}.{ext}``.
+    dfile = files[0]
+    download_file_name = f"{ds.slug}.{dfile.file_type.lower()}"
+
     context = {
         "ds": ds,
-        "dfile": files[0],
-        "num_hits": Hit.objects.filter(dataset_hit=files[0]).count(),
+        "dfile": dfile,
+        "download_file_name": download_file_name,
+        "num_hits": Hit.objects.filter(dataset_hit=dfile).count(),
         "prev_dataset": prev_dataset,
         "next_dataset": next_dataset,
         "preview_rows": preview_rows,
@@ -196,9 +201,8 @@ def download_dataset(request, file_name=None):
     # as the ``dataset`` object's slug (also the primary key) field.
     # Once we have the dataset, we can narrow down the file type with the
     # extension
-    try:
-        dataset_instance = Dataset.objects.filter(slug=base_name)[0]
-    except IndexError:
+    dataset_instance = Dataset.objects.filter(slug=base_name).first()
+    if dataset_instance is None:
         log_file.warning(
             "File not found; user request = %s; base_name=%s" % (file_name, base_name)
         )

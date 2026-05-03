@@ -58,11 +58,10 @@ Both paths serve <http://127.0.0.1:8080/>.
 ## Gotchas worth knowing before editing
 
 1. **`DatasetManager.get_query_set` is dead code.** It uses the pre-Django-1.6 method name; the modern name is `get_queryset`. Right now `is_hidden=True` datasets are still rendered on the homepage. Renaming the method will make those rows disappear — verify with the site owner before flipping the switch.
-2. **Hardcoded URL paths in templates.** `/info/{{slug}}`, `/file/{{name}}`, `/tag/{{name}}` are written as literals instead of `{% url %}` tags. URL changes have to be made in two places.
-3. **`download_dataset` relies on the file URL being publicly reachable.** It returns `HttpResponseRedirect(file_obj.link_to_file.url)`. In production Apache serves `/media/`. Locally with `runserver --nostatic`, downloads will 404 unless you serve media manually.
-4. **`Dataset.objects.filter(...)[0]`** is used in two views. If the queryset is empty it raises `IndexError`, which the surrounding `try/except IndexError` blocks catch — be careful not to "tidy" them away with `.first()` without preserving the same not-found path.
-5. **`special_message` is rendered with `|safe|escape`** in `all_datasets.html`. The chain is contradictory; `safe` wins. The string is set in the view (not user input), so it's not exploitable today, but don't add user-controlled content to it.
-6. **The logger writes to `<repo>/logfile.log`.** It's not in Django's `LOGGING` config; it's set up at module import time in `datasetapp/views.py`.
+2. **`download_dataset` relies on the file URL being publicly reachable.** It returns `HttpResponseRedirect(file_obj.link_to_file.url)`. In production Apache serves `/media/` directly. Locally, `openmv/urls.py` wires `static(MEDIA_URL, document_root=MEDIA_ROOT)` under `DEBUG=True` so `runserver` serves uploads from `BASE_DIR/media/` (the `--nostatic` flag in `make debug` only suppresses the staticfiles app's auto-serving and does not affect those explicit URL patterns).
+3. **`DataFile.objects.filter(...)[0]` in `download_dataset`** still uses `[0]` indexing inside a `try/except IndexError`. If you "tidy" it to `.first()`, preserve the same 404 path. (The two `Dataset.objects.filter(...)[0]` siblings have already been migrated to `.first()` + `None` check.)
+4. **`special_message` is rendered with `|safe|escape`** in `all_datasets.html`. The chain is contradictory; `safe` wins. The string is set in the view (not user input), so it's not exploitable today, but don't add user-controlled content to it.
+5. **The logger writes to `<repo>/logfile.log`.** It's not in Django's `LOGGING` config; it's set up at module import time in `datasetapp/views.py`.
 
 ## Tooling
 
@@ -74,7 +73,7 @@ Both paths serve <http://127.0.0.1:8080/>.
 - **Tests** run with `uv run pytest` (or `make test`). `pytest-django` is wired through `[tool.pytest.ini_options]` in `pyproject.toml`. Smoke suite lives in `datasetapp/tests/test_views.py`.
 - **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The job synthesizes a stub `.env` because `openmv/settings.py` asserts one exists at import — see the "stop asserting `.env` exists" follow-up issue.
 - **Docker compose** (`docker-compose.yml`) brings up `web` + `postgres` for **local development only**. Production still ships behind Apache; production-Docker is a tracked follow-up.
-- **pre-commit** is configured (`.pre-commit-config.yaml`) but hook versions are pinned to late 2021 / early 2022. `pre-commit autoupdate` is a tracked follow-up.
+- **pre-commit** is configured (`.pre-commit-config.yaml`) — hooks are kept on current stable releases (`pre-commit-hooks` v5, `mypy` v1.13, `isort` 5.13, `black` 24.10, `blacken-docs` 1.19, `flake8` 7.1). Refresh with `pre-commit autoupdate` and re-run `pre-commit run --all-files` before merging.
 - **flake8** config: `.flake8`. Line length 100. Ignores E266/E203/E231/W503.
 
 ## Branch conventions

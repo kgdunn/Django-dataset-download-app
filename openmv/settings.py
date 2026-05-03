@@ -4,6 +4,7 @@ Django settings for the openmv project.
 See https://docs.djangoproject.com/en/stable/topics/settings/ for an overview
 and https://docs.djangoproject.com/en/stable/ref/settings/ for the full list.
 """
+
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -135,6 +136,12 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / STATIC_URL.strip("/")
+
+# Media files (admin-uploaded dataset CSV/XLS/XML/MAT files).
+# In production Apache serves /media/ directly; locally `runserver` only
+# serves it when openmv/urls.py wires up `static()` under DEBUG.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field

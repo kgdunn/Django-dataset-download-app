@@ -90,7 +90,7 @@ Either path serves <http://127.0.0.1:8080/>. Create a superuser with `uv run pyt
 
 - `DJANGO_DEBUG=0` switches the database to PostgreSQL using `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SQL_HOST`, `SQL_PORT` from `.env`.
 - `ALLOWED_HOSTS` is hardcoded to `.openmv.net` and `127.0.0.1` in `openmv/settings.py`. Change it there for other deployments.
-- Static files land in `BASE_DIR / 'static'` after `python manage.py collectstatic`. The live site has Apache serving `/static/` and `/media/` directly; the `download_dataset` view returns a redirect to the file URL rather than streaming the file through Django.
+- Static files land in `BASE_DIR / 'static'` after `python manage.py collectstatic`. Admin-uploaded dataset files land in `BASE_DIR / 'media'` (`MEDIA_ROOT`), reachable at `/media/` (`MEDIA_URL`). The live site has Apache serving `/static/` and `/media/` directly; the `download_dataset` view returns a 302 to the `/media/...` URL rather than streaming the file through Django. Locally, `runserver` serves `/media/` only when `DJANGO_DEBUG=1` (see `openmv/urls.py`); in production Apache must be configured to intercept `/media/` before the request reaches Django.
 - The `Hit` table grows with every download. There is no automatic pruning.
 
 ## Tooling

@@ -27,6 +27,18 @@ DEBUG = bool(int(dotenv_values(dotenv_path=dotenv_file).get("DJANGO_DEBUG", None
 
 ALLOWED_HOSTS = [".openmv.net", "127.0.0.1"]
 
+# Caddy terminates TLS on the host and proxies plain HTTP to gunicorn.
+# This header tells Django the request was originally HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Required by Django 4.x for any non-GET request (e.g. admin login) when the
+# request reaches Django over HTTPS via a reverse proxy.
+CSRF_TRUSTED_ORIGINS = [
+    "https://openmv.net",
+    "https://www.openmv.net",
+    "https://test.openmv.net",
+]
+
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",

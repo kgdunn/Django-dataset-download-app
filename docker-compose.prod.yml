@@ -1,0 +1,58 @@
+# Production compose file for openmv.net on a multi-tenant VPS where Caddy
+# (host-installed) is the shared reverse proxy. Both services bind to
+# loopback only; Caddy is the sole public-facing process.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Ports are offset from any other Compose stack on the same host:
+#   - openmv-app:      127.0.0.1:8001 -> 8000
+#   - openmv-postgres: 127.0.0.1:5434 -> 5432
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: openmv-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - openmv_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build: .
+    image: openmv-app:latest
+    container_name: openmv-app
+    env_file: .env
+    environment:
+      SQL_HOST: db
+      SQL_PORT: 5432
+    volumes:
+      - ./data/media:/app/media
+      - ./data/static:/app/static
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn openmv.wsgi:application
+                      --bind 0.0.0.0:8000
+                      --workers 3
+                      --access-logfile -
+                      --error-logfile -"
+
+volumes:
+  openmv_postgres_data:

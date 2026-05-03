@@ -9,6 +9,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: openmv
+          POSTGRES_USER: openmv
+          POSTGRES_PASSWORD: openmv
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,3 +42,9 @@ jobs:
         run: uv run pytest
         env:
           SECRET_KEY: ci-test-key
+          DJANGO_SETTINGS_MODULE: openmv.settings.ci
+          POSTGRES_DB: openmv
+          POSTGRES_USER: openmv
+          POSTGRES_PASSWORD: openmv
+          SQL_HOST: 127.0.0.1
+          SQL_PORT: "5432"

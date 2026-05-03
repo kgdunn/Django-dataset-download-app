@@ -10,7 +10,7 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
 
 ## Project shape
 
-- **Project**: `openmv/` (settings package, URL conf, WSGI/ASGI). Settings live under `openmv/settings/` — `base.py` (shared), `dev.py` (local SQLite + DEBUG=True), `prod.py` (Postgres + DEBUG=False + Caddy proxy headers).
+- **Project**: `openmv/` (settings package, URL conf, WSGI/ASGI). Settings live under `openmv/settings/` — `base.py` (shared), `dev.py` (local SQLite + DEBUG=True), `prod.py` (Postgres + DEBUG=False + Caddy proxy headers), `ci.py` (GitHub Actions — derives from `prod.py` and disables HTTPS-only middleware so the Django test client works).
 - **App**: `datasetapp/` (the only app).
 - **Models** (`datasetapp/models.py`): `Tag`, `Dataset`, `DataFile`, `Hit`.
   - `Dataset` ↔ `Tag` is many-to-many.
@@ -35,6 +35,7 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
 - Which DB / hosts / DEBUG flag you get depends on `DJANGO_SETTINGS_MODULE`:
   - `openmv.settings.dev` (default in `manage.py`, `wsgi.py`, `asgi.py`, `pyproject.toml` pytest) → SQLite at `db.sqlite3`, `DEBUG=True`, `ALLOWED_HOSTS` from `$ALLOWED_HOSTS` (default `127.0.0.1,localhost`).
   - `openmv.settings.prod` (forced by `docker-compose.prod.yml`'s `web.environment` block) → Postgres via `POSTGRES_*` + `SQL_*` keys, `DEBUG=False`, `ALLOWED_HOSTS` from `$ALLOWED_HOSTS` (default `.openmv.net,127.0.0.1`), `SECURE_PROXY_SSL_HEADER` + `CSRF_TRUSTED_ORIGINS` for Caddy.
+  - `openmv.settings.ci` (forced by `.github/workflows/ci.yml` for the pytest step) → re-exports prod, then turns off `SECURE_SSL_REDIRECT` / HSTS / secure-cookie flags so the Django test client (which uses HTTP) doesn't hit a 301. Same Postgres `POSTGRES_*` + `SQL_*` env vars as prod, supplied by the workflow against the `postgres:16-alpine` service.
 
 ## Running locally
 
@@ -101,7 +102,7 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
   - Refresh the lockfile after manual edits: `uv lock`
   - Django is pinned `>=4.2,<5.0` until 5.x has been smoke-tested on staging.
 - **Tests** run with `uv run pytest` (or `make test`). `pytest-django` is wired through `[tool.pytest.ini_options]` in `pyproject.toml`. Smoke suite lives in `datasetapp/tests/test_views.py`.
-- **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The pytest step injects `SECRET_KEY` directly via the workflow `env:` block — no `.env` file is created.
+- **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The pytest step boots a `postgres:16-alpine` service container, sets `DJANGO_SETTINGS_MODULE=openmv.settings.ci`, and injects `SECRET_KEY` + `POSTGRES_*` + `SQL_*` env vars directly via the workflow `env:` block — no `.env` file is created. Tests therefore run against the same database engine as production, catching Postgres-only behaviour that SQLite would silently paper over.
 - **Docker compose**: `docker-compose.yml` is for **local development** (volume-mounts the source for hot reload, runs `runserver` against SQLite via `openmv.settings.dev`). `docker-compose.prod.yml` is the **production** compose used on Hetzner (bind-mounts `.env` and `data/` dirs, sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod`, runs `migrate` + `collectstatic` + `gunicorn`, binds to loopback on offset ports `8001`/`5434`). Both use the same `Dockerfile`.
 - **pre-commit** is configured (`.pre-commit-config.yaml`) — hooks are kept on current stable releases (`pre-commit-hooks` v5, `mypy` v1.13, `isort` 5.13, `black` 24.10, `blacken-docs` 1.19, `flake8` 7.1). Refresh with `pre-commit autoupdate` and re-run `pre-commit run --all-files` before merging.
 - **flake8** config: `.flake8`. Line length 100. Ignores E266/E203/E231/W503.
@@ -111,10 +112,36 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 - Production deploys ship from `master`.
 - Modernization work happens on `claude/modernize-legacy-repo-*` branches and is reviewed before merge.
 
+## Versioning and releases
+
+Every PR that changes runtime behaviour, dependencies, settings, CI, deploy
+scripts, or public docs **must** bump `version` in `pyproject.toml` and add a
+matching `## v<new-version>` section to `RELEASES.md` describing the change.
+The version field is the trigger for the release pipeline — no bump means no
+release.
+
+Bump heuristic (anchors the policy stated in the v1.0.0 release notes):
+
+- **PATCH** (`x.y.Z`) — bugfixes, dependency security bumps, infra-only
+  tweaks with no user-visible behaviour change.
+- **MINOR** (`x.Y.0`) — additive features, schema additions, new templates,
+  new settings modules, CI parity work (e.g. Postgres-in-CI).
+- **MAJOR** (`X.0.0`) — URL or template structure breaks, removal of public
+  views, anything that could surprise an unsuspecting visitor.
+
+If unsure which level to pick, **ask the human reviewer before merging.** When
+running as Claude Code, ask via `AskUserQuestion` rather than guessing.
+
+Tagging and the GitHub Release are produced automatically by
+`.github/workflows/release.yml` once the bumped `pyproject.toml` and the
+matching `RELEASES.md` section land on `master`. The workflow refuses to run
+if the `## v<version>` heading is missing — that's the safety net. **Do not**
+create tags manually.
+
 ## Outstanding work
 
 The GitHub issue tracker is the single source of truth for outstanding work: <https://github.com/kgdunn/Django-dataset-download-app/issues>. Don't duplicate the list here — it goes stale.
 
 ## Keeping this file consistent
 
-CLAUDE.md must stay consistent with the codebase. On any PR that touches `datasetapp/`, `openmv/`, `pyproject.toml`, `Makefile`, `.pre-commit-config.yaml`, or `.github/workflows/`, re-read this file before opening the PR and update anything that has drifted — Project shape, How it runs, Gotchas, Tooling, Branch conventions. If you're Claude Code, run this consistency check on every implementation task, not just when explicitly asked.
+CLAUDE.md must stay consistent with the codebase. On any PR that touches `datasetapp/`, `openmv/`, `pyproject.toml`, `RELEASES.md`, `Makefile`, `.pre-commit-config.yaml`, or `.github/workflows/`, re-read this file before opening the PR and update anything that has drifted — Project shape, How it runs, Gotchas, Tooling, Branch conventions, Versioning and releases. If you're Claude Code, run this consistency check on every implementation task, not just when explicitly asked.

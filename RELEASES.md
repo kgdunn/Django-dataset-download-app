@@ -2,19 +2,20 @@
 
 ## v1.2.0
 
-Django bumped from 4.2 LTS to 5.1, closing the E1 item on the modernization
-roadmap (#42). Django 4.2 LTS is supported until April 2026; moving now gives
-runway to catch any breakage before EOL.
+Django bumped from 4.2 LTS to 5.2 LTS, closing the E1 item on the
+modernization roadmap (#42). Django 4.2 LTS reaches EOL in April 2026;
+5.2 LTS (released April 2025) is the current LTS series and keeps the
+project on the same LTS-only cadence.
 
 ### Highlights
 
-- **Django 5.1** (#35): `pyproject.toml` pin moved from `>=4.2,<5.0` to
-  `>=5.1,<5.2`; `uv.lock` refreshed (django 4.2.30 → 5.1.15). The smoke
-  test suite (`datasetapp/tests/test_views.py`) passes unchanged against
-  5.1; `manage.py check` and `manage.py check --deploy` report no new
-  warnings beyond the pre-existing `SECURE_HSTS_PRELOAD=False` (deliberate
-  staged HSTS rollout from C3). No code changes were needed — the
-  pre-flight audit found no usage of the APIs Django 5.x removed
+- **Django 5.2 LTS** (#35): `pyproject.toml` pin moved from `>=4.2,<5.0`
+  to `>=5.2,<5.3`; `uv.lock` refreshed (django 4.2.30 → 5.2.13). The
+  smoke test suite (`datasetapp/tests/test_views.py`) passes unchanged
+  against 5.2; `manage.py check` and `manage.py check --deploy` report
+  no new warnings beyond the pre-existing `SECURE_HSTS_PRELOAD=False`
+  (deliberate staged HSTS rollout from C3). No code changes were needed
+  — the pre-flight audit found no usage of the APIs Django 5.x removed
   (`USE_L10N`, `django.utils.timezone.utc`, `index_together`, etc.).
 - **CLAUDE.md**: the "Tooling" section now reflects the new pin and notes
   the bump rationale; the "Outstanding work" referent (#35) is now closed.

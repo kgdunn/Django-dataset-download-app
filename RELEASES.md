@@ -1,5 +1,28 @@
 # Releases
 
+## v1.1.0
+
+CI now runs the test suite against Postgres 16 to match production, closing
+the C4 item on the modernization roadmap (#42).
+
+### Highlights
+
+- **Postgres in CI** (#30): `.github/workflows/ci.yml` boots a
+  `postgres:16-alpine` service container and points pytest at a new
+  `openmv.settings.ci` module. The new module derives from `prod.py` —
+  Postgres engine, `DEBUG=False`, the same `POSTGRES_*` + `SQL_*` env-var
+  contract — but disables `SECURE_SSL_REDIRECT`, HSTS, and the
+  secure-cookie flags so the Django test client (which speaks plain HTTP)
+  doesn't get 301-redirected on every request. Postgres-only behaviour
+  (datatypes, transaction semantics, parameter quoting, migrations) is now
+  exercised by the smoke suite on every push and PR.
+- **Versioning policy**: CLAUDE.md gains a "Versioning and releases"
+  section codifying the every-PR `pyproject.toml` + `RELEASES.md` bump
+  rule, the patch/minor/major heuristic, and the requirement to ask the
+  human reviewer (or `AskUserQuestion` when running as Claude Code) when
+  unsure. Tag + GitHub Release continue to be produced automatically by
+  `release.yml`.
+
 ## v1.0.0
 
 First tagged release. Captures the 2026 modernization of the long-standing

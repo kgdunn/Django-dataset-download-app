@@ -94,7 +94,7 @@ def about_dataset(request, dataset_name=None):
     # "slug" is the unique key in the "Dataset" table
     ds = Dataset.objects.filter(slug=dataset_name.lower())
     if len(ds) == 0:
-        log_file.error("An invalid dataset was requested" % dataset_name.lower())
+        log_file.error("An invalid dataset was requested: %s", dataset_name.lower())
         return HttpResponseRedirect(django_reverse("datasetapp:dataset-home-page"))
 
     files = DataFile.objects.filter(dataset=ds[0])

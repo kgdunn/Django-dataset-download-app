@@ -19,8 +19,8 @@ class Tag(models.Model):
 
 
 class DatasetManager(models.Manager):
-    def get_query_set(self):
-        return super(DatasetManager, self).get_query_set().filter(is_hidden=False)
+    def get_queryset(self):
+        return super().get_queryset().filter(is_hidden=False)
 
 
 class Dataset(models.Model):

@@ -1,43 +1,28 @@
 """
-Django settings for the openmv project.
+Shared Django settings for the openmv project.
+
+`dev.py` and `prod.py` import from here and add the per-environment
+DEBUG / DATABASES / ALLOWED_HOSTS / proxy-header bits. Pick which one
+to use via DJANGO_SETTINGS_MODULE (defaults to openmv.settings.dev).
 
 See https://docs.djangoproject.com/en/stable/topics/settings/ for an overview
 and https://docs.djangoproject.com/en/stable/ref/settings/ for the full list.
 """
 
 from pathlib import Path
+from typing import Any
 
 from dotenv import dotenv_values
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 dotenv_file = BASE_DIR / ".env"
 assert Path(dotenv_file).parent.exists(), f"{dotenv_file} directory does not exist"
 assert Path(dotenv_file).exists(), f"{dotenv_file} does not exist"
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = dotenv_values(dotenv_path=dotenv_file).get("SECRET_KEY", None)
 assert SECRET_KEY is not None
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(int(dotenv_values(dotenv_path=dotenv_file).get("DJANGO_DEBUG", None)))
-
-ALLOWED_HOSTS = [".openmv.net", "127.0.0.1"]
-
-# Caddy terminates TLS on the host and proxies plain HTTP to gunicorn.
-# This header tells Django the request was originally HTTPS.
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-# Required by Django 4.x for any non-GET request (e.g. admin login) when the
-# request reaches Django over HTTPS via a reverse proxy.
-CSRF_TRUSTED_ORIGINS = [
-    "https://openmv.net",
-    "https://www.openmv.net",
-    "https://test.openmv.net",
-]
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,13 +47,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "openmv.urls"
 
-TEMPLATES = [
+# `OPTIONS.debug` is set per-environment in dev.py / prod.py, after this
+# import, so the template debug toolbar tracks the real DEBUG flag.
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
-            "debug": DEBUG,
+            "debug": False,
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
@@ -81,35 +68,6 @@ TEMPLATES = [
 
 
 WSGI_APPLICATION = "openmv.wsgi.application"
-
-# Database
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
-
-if DEBUG:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-else:
-    keys = ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "SQL_HOST", "SQL_PORT"]
-    db_settings = {}
-    for key in keys:
-        value = dotenv_values(dotenv_path=dotenv_file).get(key, None)
-        assert value is not None, f"{key} is not set in the .env file"
-        db_settings[key] = value
-
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": db_settings["POSTGRES_DB"],
-            "USER": db_settings["POSTGRES_USER"],
-            "PASSWORD": db_settings["POSTGRES_PASSWORD"],
-            "HOST": db_settings["SQL_HOST"],
-            "PORT": db_settings["SQL_PORT"],
-        }
-    }
 
 
 # Password validation
@@ -150,7 +108,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / STATIC_URL.strip("/")
 
 # Media files (admin-uploaded dataset CSV/XLS/XML/MAT files).
-# In production Apache serves /media/ directly; locally `runserver` only
+# In production Caddy serves /media/ directly; locally `runserver` only
 # serves it when openmv/urls.py wires up `static()` under DEBUG.
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

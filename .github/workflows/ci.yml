@@ -20,15 +20,14 @@ jobs:
       - name: Install dependencies (locked)
         run: uv sync --frozen
 
-      # `openmv/settings.py` asserts that .env exists at import time, so the
-      # test runner blows up without one. Synthesize a minimal .env here.
+      # `openmv/settings/base.py` asserts that .env exists at import time, so
+      # the test runner blows up without one. Synthesize a minimal .env here.
       # TODO: drop this once settings reads from os.environ first.
       # Tracked in the "stop asserting .env exists" follow-up issue.
       - name: Create stub .env for tests
         run: |
           cat > .env <<'EOF'
           SECRET_KEY=ci-test-key
-          DJANGO_DEBUG=1
           EOF
 
       - name: Lint (pre-commit)

@@ -2,6 +2,7 @@
     :copyright: Copyright 2010, by Kevin Dunn
     :license: BSD, see LICENSE file for details.
 """
+
 from django.db import models
 
 

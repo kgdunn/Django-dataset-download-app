@@ -18,10 +18,11 @@ The site lets visitors:
 ├── pyproject.toml            # uv-managed dependencies + pytest config
 ├── uv.lock                   # committed lockfile
 ├── Dockerfile                # multi-stage image for local dev (and future prod)
-├── docker-compose.yml        # web + postgres for local dev parity
+├── docker-compose.yml        # local dev (SQLite, runserver)
+├── docker-compose.prod.yml   # production (Postgres, gunicorn)
 ├── .github/workflows/ci.yml  # pre-commit + pytest on push and PR
 ├── openmv/                   # Django project (settings, root URLs, WSGI/ASGI)
-│   ├── settings.py
+│   ├── settings/             # base.py + dev.py + prod.py
 │   ├── urls.py
 │   ├── wsgi.py
 │   └── asgi.py
@@ -47,7 +48,7 @@ The site lets visitors:
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) for dependency management
-- PostgreSQL (production / docker compose) — SQLite is used automatically when `DJANGO_DEBUG=1`.
+- PostgreSQL (production only, via `openmv.settings.prod`). Local dev uses SQLite via `openmv.settings.dev`.
 
 Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`.
 
@@ -64,8 +65,9 @@ uv sync --dev
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env: set SECRET_KEY to any random string, leave DJANGO_DEBUG=1.
-# The Postgres-related keys are only consulted when DJANGO_DEBUG=0.
+# Edit .env: set SECRET_KEY to any random string. The Postgres keys are
+# only consulted by openmv.settings.prod, so they can stay as the
+# placeholders for local dev.
 
 # 4. Run the dev server (collectstatic + migrate + createcachetable + runserver:8080)
 make debug
@@ -74,11 +76,13 @@ make debug
 ### Docker compose
 
 ```bash
-cp .env.example .env   # set SECRET_KEY and POSTGRES_*; set DJANGO_DEBUG=0
-make docker-up         # builds + starts web (Django) and db (Postgres)
+cp .env.example .env   # set SECRET_KEY
+make docker-up         # builds + runs runserver against SQLite
 ```
 
-Either path serves <http://127.0.0.1:8080/>. Create a superuser with `uv run python manage.py createsuperuser` (native) or `docker compose exec web python manage.py createsuperuser` (Docker) to log into `/admin/` and add Tags / Datasets / DataFiles.
+Both paths use `openmv.settings.dev` (SQLite) and serve <http://127.0.0.1:8080/>. To rehearse the production stack locally (Postgres + gunicorn + `openmv.settings.prod`), use `docker compose -f docker-compose.prod.yml up --build` instead.
+
+Create a superuser with `uv run python manage.py createsuperuser` (native) or `docker compose exec web python manage.py createsuperuser` (Docker) to log into `/admin/` and add Tags / Datasets / DataFiles.
 
 ## Testing & CI
 
@@ -88,8 +92,8 @@ Either path serves <http://127.0.0.1:8080/>. Create a superuser with `uv run pyt
 
 ## Production notes
 
-- `DJANGO_DEBUG=0` switches the database to PostgreSQL using `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SQL_HOST`, `SQL_PORT` from `.env`.
-- `ALLOWED_HOSTS` is hardcoded to `.openmv.net` and `127.0.0.1` in `openmv/settings.py`. Change it there for other deployments.
+- Production sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod` (wired in `docker-compose.prod.yml`), which selects PostgreSQL via `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SQL_HOST`, `SQL_PORT` from `.env` and turns off `DEBUG`.
+- `ALLOWED_HOSTS` is hardcoded to `.openmv.net` and `127.0.0.1` in `openmv/settings/prod.py`. Change it there for other deployments.
 - Static files land in `BASE_DIR / 'static'` after `python manage.py collectstatic`. Admin-uploaded dataset files land in `BASE_DIR / 'media'` (`MEDIA_ROOT`), reachable at `/media/` (`MEDIA_URL`). The live site has Apache serving `/static/` and `/media/` directly; the `download_dataset` view returns a 302 to the `/media/...` URL rather than streaming the file through Django. Locally, `runserver` serves `/media/` only when `DJANGO_DEBUG=1` (see `openmv/urls.py`); in production Apache must be configured to intercept `/media/` before the request reaches Django.
 - The `Hit` table grows with every download. There is no automatic pruning.
 

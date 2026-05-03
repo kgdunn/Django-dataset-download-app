@@ -34,12 +34,13 @@ services:
     container_name: openmv-app
     env_file: .env
     environment:
+      DJANGO_SETTINGS_MODULE: openmv.settings.prod
       SQL_HOST: db
       SQL_PORT: 5432
     volumes:
-      # openmv/settings.py reads the .env file at BASE_DIR / ".env" at import
-      # time (not just environment variables), so the file itself must be
-      # present in the container. .dockerignore excludes it from the image,
+      # openmv/settings/base.py reads the .env file at BASE_DIR / ".env" at
+      # import time (not just environment variables), so the file itself must
+      # be present in the container. .dockerignore excludes it from the image,
       # so we bind-mount the host copy read-only.
       - ./.env:/app/.env:ro
       - ./data/media:/app/media

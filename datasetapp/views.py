@@ -30,19 +30,6 @@ from .models import DataFile, Dataset, Hit, Tag
 log_file = logging.getLogger("datasetapp")
 
 
-def get_IP_address(request) -> str:
-    """
-    Returns the visitor's IP address as a string given the Django ``request``.
-    """
-    # Catchs the case when the user is on a proxy
-    ip = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if ip == "" or ip.lower() in ("unkown",):
-        ip = request.META.get("REMOTE_ADDR", "")  # User is not on a proxy
-    if ip == "" or ip.lower() in ("unkown",):
-        ip = request.META.get("HTTP_X_REAL_IP")
-    return ip
-
-
 def display_by_tag(request, tag):
     """
     Shows only the datasets with the given tag
@@ -216,13 +203,7 @@ def download_dataset(request, file_name=None):
 
     # Increment hit counter
     try:
-        dataset_hit = Hit(
-            UA_string=request.META["HTTP_USER_AGENT"],
-            IP_address=get_IP_address(request),
-            dataset_hit=file_obj,
-            referrer=request.META.get("HTTP_REFERER", ""),
-        )
-        dataset_hit.save()
+        Hit(dataset_hit=file_obj).save()
     except Exception as e:
         log_file.error("Failed to create Hit object: {0}".format(e))
 

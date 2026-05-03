@@ -1,5 +1,40 @@
 # Releases
 
+## v1.3.0
+
+Privacy fix for the `Hit` table — closes #17 and clears the last
+remaining D-batch item in the modernization roadmap (#42).
+
+### Highlights
+
+- **Hit schema trimmed** (#17): `datasetapp.models.Hit` no longer stores
+  `UA_string`, `IP_address`, or `referrer`. The table is now
+  `(id, dataset_hit_id, date_and_time)` — exactly the columns the public
+  site uses to render the per-dataset download counter and the 365-day
+  sparkline (`_download_series` in `datasetapp/views.py` groups rows by
+  `TruncDate("date_and_time")`). The `download_dataset` view writes one
+  row per download via `Hit(dataset_hit=file_obj).save()`; the unused
+  `get_IP_address` helper was removed.
+- **Migration `0002_drop_hit_pii`** runs three `RemoveField` ops on the
+  `Hit` model. On any database that pre-dates this release, applying the
+  migration drops the columns and destroys all legacy IP / UA / referrer
+  values in one step — there is no separate retention job because the
+  schema itself no longer holds PII.
+- **Admin tightened** (`datasetapp/admin.py`): `HitAdmin.list_display`
+  and `list_filter` only reference the surviving columns. Admin users no
+  longer see PII because the database no longer holds any.
+- **Tests**: `Hit.objects.create(...)` calls in
+  `datasetapp/tests/test_views.py` updated to the trimmed schema; the
+  365-day sparkline assertion (`sum(point[1] for point in series) == 1`)
+  still passes against the new model.
+- **CLAUDE.md** + **README.md**: the "Models" line and the README
+  bullet now describe the privacy posture of the `Hit` table; a Gotcha
+  documents the migration as the place legacy PII gets dropped.
+
+No visitor-visible behaviour change — both the count and the sparkline
+render identically. Download history is preserved indefinitely; only the
+PII columns go away.
+
 ## v1.2.0
 
 Django bumped from 4.2 LTS to 5.2 LTS, closing the E1 item on the

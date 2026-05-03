@@ -7,7 +7,7 @@ The site lets visitors:
 - Browse every public dataset in one sortable table.
 - Filter datasets by tag.
 - Read a per-dataset detail page with description, source, shape, usage restrictions, and contact info.
-- Download a dataset in CSV / XLS / XML / MAT format. Each download is logged (IP, user-agent, referrer) for hit-counting.
+- Download a dataset in CSV / XLS / XML / MAT format. Each download increments a privacy-respecting hit counter (timestamp + dataset only — no IP, user-agent, or referrer is stored).
 
 ## Layout
 

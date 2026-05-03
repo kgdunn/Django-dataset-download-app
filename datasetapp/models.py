@@ -121,17 +121,13 @@ class DataFile(models.Model):
 
 class Hit(models.Model):
     """
-    Tracks dataset hits to a *download* of the dataset (not just to view it)
+    One row per dataset download. Stores only the file reference and the
+    timestamp — no IP, User-Agent, or referrer — so the table can be retained
+    indefinitely without holding visitor PII (see #17).
     """
 
-    UA_string = models.CharField(max_length=500)  # user agent of browser
-    IP_address = models.GenericIPAddressField()
     date_and_time = models.DateTimeField(auto_now=True)
     dataset_hit = models.ForeignKey(DataFile, on_delete=models.PROTECT)
-    referrer = models.TextField(max_length=500)
 
     def __str__(self):
-        return (
-            f"{str(self.date_and_time)[0:19]}: from IP={self.IP_address} visited "
-            f"<<{self.dataset_hit}>> [refer: {self.referrer}]"
-        )
+        return f"{str(self.date_and_time)[0:19]}: <<{self.dataset_hit}>>"

@@ -15,7 +15,7 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
 - **Models** (`datasetapp/models.py`): `Tag`, `Dataset`, `DataFile`, `Hit`.
   - `Dataset` ↔ `Tag` is many-to-many.
   - `Dataset` ↔ `DataFile` is one-to-many (a dataset can have CSV + XLS + XML + MAT siblings).
-  - `Hit` records one download. Stores raw IP + UA + referrer.
+  - `Hit` records one download. Since v1.3.0 (#17) the table holds only `(dataset_hit, date_and_time)` — no IP, User-Agent, or referrer is captured. Two columns power both visible features: the per-dataset count on the detail page and the 365-day sparkline (`_download_series` in `datasetapp/views.py` groups rows by `TruncDate("date_and_time")`). Rows are kept indefinitely; the per-row history is fine to retain because no PII is stored.
 - **Views** (`datasetapp/views.py`):
   - `display_all` — `/` — homepage table.
   - `display_by_tag` — `/tag/<slug>` — filter by tag.
@@ -93,6 +93,7 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 4. **`DataFile.objects.filter(...)[0]` in `download_dataset`** still uses `[0]` indexing inside a `try/except IndexError`. If you "tidy" it to `.first()`, preserve the same 404 path. (The two `Dataset.objects.filter(...)[0]` siblings have already been migrated to `.first()` + `None` check.)
 5. **`special_message` is rendered with `|safe|escape`** in `all_datasets.html`. The chain is contradictory; `safe` wins. The string is set in the view (not user input), so it's not exploitable today, but don't add user-controlled content to it.
 6. **The `datasetapp` logger is configured by the `LOGGING` dict in `openmv/settings/base.py`** and writes to stdout via a `StreamHandler`. In the production Docker container that means `docker logs` (and any host log shipper) captures everything; locally it streams to the `runserver` terminal. Override the level for ad-hoc debugging by setting `DATASETAPP_LOG_LEVEL=DEBUG` in `.env` or the process env.
+7. **Migration `0002_drop_hit_pii` is what destroys legacy IP / User-Agent / referrer data** in any database that pre-dates v1.3.0 — the columns are dropped, taking every existing value with them. There is no separate retention job because the schema itself no longer holds PII. If you ever restore a pre-v1.3.0 backup, re-run `manage.py migrate` to re-trim it.
 
 ## Tooling
 

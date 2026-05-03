@@ -71,10 +71,7 @@ def test_tag_view_returns_200(client, dataset, tag):
 
 def test_download_known_file_returns_302_and_increments_hits(client, dataset, csv_file):
     before = Hit.objects.count()
-    response = client.get(
-        reverse("datasetapp:dataset-download", args=["iris.csv"]),
-        HTTP_USER_AGENT="pytest",
-    )
+    response = client.get(reverse("datasetapp:dataset-download", args=["iris.csv"]))
     assert response.status_code == 302
     assert Hit.objects.count() == before + 1
 
@@ -141,12 +138,7 @@ def test_about_omits_preview_when_only_non_csv_files(client, db):
 
 
 def test_about_includes_download_series_for_sparkline(client, dataset, csv_file):
-    Hit.objects.create(
-        UA_string="pytest",
-        IP_address="127.0.0.1",
-        dataset_hit=csv_file,
-        referrer="",
-    )
+    Hit.objects.create(dataset_hit=csv_file)
     response = client.get(
         reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])
     )

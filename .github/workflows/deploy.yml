@@ -1,0 +1,54 @@
+# Auto-deploy openmv to the Hetzner production host on every push to master.
+#
+# How it works:
+#   - The job opens an SSH session to the deploy user on Hetzner using a key
+#     stored in the HETZNER_SSH_KEY repository secret.
+#   - That key's entry in the host's authorized_keys uses a forced command,
+#     so the only thing the SSH session can do is run a fixed wrapper script
+#     (~/openmv/bin/deploy.sh on the host). Whatever this workflow puts after
+#     `ssh user@host` is ignored by the server.
+#   - The wrapper fast-forwards the repo to origin/master, then exec's
+#     bin/deploy-impl.sh from the freshly-pulled tree — that's the file you
+#     edit when you want to change deploy behaviour.
+#
+# A leaked HETZNER_SSH_KEY can therefore only trigger the deploy script;
+# it cannot open a shell, run docker commands directly, or read other apps
+# on the same VPS.
+
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-hetzner
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: SSH and trigger deploy
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USERNAME: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # The remote SSH server will ignore any command we pass and run
+          # the forced command from authorized_keys (~/openmv/bin/deploy.sh).
+          ssh -i ~/.ssh/deploy_key \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=20 \
+              "$USERNAME@$HOST"

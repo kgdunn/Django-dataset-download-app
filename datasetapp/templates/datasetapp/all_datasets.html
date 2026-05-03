@@ -8,41 +8,41 @@ Datasets{% endif %}{% endblock %}
 <div id="special_message">{{ special_message|safe|escape }}</div>
 
 {% if show_home_page %}
+<p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
 <h3>Showing data sets with "{{current_tag}}" tag</h3>
-<span class="dataset-tag-right"><a href="{% url 'datasetapp:dataset-home-page' %}">Back to all datasets</a></span>
-<br>
-<span class="dataset-tag-left">{{current_tag_description}}</span>
+<p>{{current_tag_description}}</p>
 {% endif %}
 
-<br>
 <div class="dataset-results">
-
-    <table class="wikitable sortable">
-        <thead class="dataset-header">
-            <td style="padding-right: 10px;">Name</td>
-            <td>Description</td>
-            <td style="padding-left: 10px; padding-right: 10px;" id="rows">Rows</td>
-            <td style="padding-left: 10px; padding-right: 10px;" id="cols">Columns</td>
-            <!-- <td>Download</td> -->
-            <td style="text-align:left">Tags</td>
-        </thead>
-        {% for dataset in dataset_list %}
-        {% spaceless %}
-        <tr class="{% cycle 'row-odd' 'row-even' %} dataset-row">
-            <td style="padding-right: 10px;" width="20%"><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a>
-            <td width="80%">{{dataset.description|striptags}}</td>
-            <td class="dataset-rows" width="8%">{{dataset.rows}}</td>
-            <td class="dataset-cols" width="10%">{{dataset.cols}}</td>
-            <td>
-                {% for tag in dataset.tags.all %}
-                <span><a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a></span>
-                {% endfor %}
-            </td>
-        </tr>
-        {% endspaceless %}
-        {% endfor %}
-    </table>
-
-
+    <div class="table-responsive">
+        <table class="wikitable sortable table">
+            <thead class="dataset-header">
+                <tr>
+                    <td style="padding-right: 10px;">Name</td>
+                    <td>Description</td>
+                    <td style="padding-left: 10px; padding-right: 10px;" id="rows">Rows</td>
+                    <td style="padding-left: 10px; padding-right: 10px;" id="cols">Columns</td>
+                    <td style="text-align:left">Tags</td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for dataset in dataset_list %}
+            {% spaceless %}
+            <tr class="{% cycle 'row-odd' 'row-even' %} dataset-row">
+                <td style="padding-right: 10px;"><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a></td>
+                <td>{{dataset.description|striptags}}</td>
+                <td class="dataset-rows">{{dataset.rows}}</td>
+                <td class="dataset-cols">{{dataset.cols}}</td>
+                <td>
+                    {% for tag in dataset.tags.all %}
+                    <span><a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a></span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endspaceless %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

@@ -3,113 +3,95 @@
 
 {% block title %}{{ds.name|safe}}-OpenMV.net Datasets{% endblock %}
 {% block body %}
-<span class="dataset-tag-right"><a href="{% url 'datasetapp:dataset-home-page' %}">Back to all datasets</a></span>
+<p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
 
-<h3>{{ds.name}}</h3>
-<div id="dataset-content">
-    <table>
-        <tr>
-            <td class="dataset row" width="25%">Description:</td>
-            <td>{{ds.description|safe}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Data source:</td>
-            <td>{{ds.data_source|safe}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Data shape:</td>
-            <td>{{ds.rows}} rows and {{ds.cols}} columns</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Usage restrictions:</td>
-            <td>{{ds.usage_restrictions}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Contact person:</td>
-            <td>{{ds.author_name}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Contact details:</td>
-            <td>{{ds.author_email}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Added here on:</td>
-            <td>{{ds.created_on|date:"d F Y G:i"}}</td>
-        </tr>
-        <tr>
-            <td class="dataset row">Last updated:</td>
-            <td>{{ds.updated_on|date:"d F Y G:i"}}</td>
-        </tr>
-    </table>
+<h3>{{ ds.name }}</h3>
+
+<div class="detail-grid">
+    <div id="dataset-content">
+        <dl class="dataset-meta">
+            <dt>Description:</dt>        <dd>{{ ds.description|safe }}</dd>
+            <dt>Data source:</dt>        <dd>{{ ds.data_source|safe }}</dd>
+            <dt>Data shape:</dt>         <dd>{{ ds.rows }} rows and {{ ds.cols }} columns</dd>
+            <dt>Usage restrictions:</dt> <dd>{{ ds.usage_restrictions }}</dd>
+            <dt>Contact person:</dt>     <dd>{{ ds.author_name }}</dd>
+            <dt>Contact details:</dt>    <dd>{{ ds.author_email }}</dd>
+            <dt>Added here on:</dt>      <dd>{{ ds.created_on|date:"d F Y G:i" }}</dd>
+            <dt>Last updated:</dt>       <dd>{{ ds.updated_on|date:"d F Y G:i" }}</dd>
+        </dl>
+    </div>
+
+    <aside id="dataset-download">
+        <h4>Download</h4>
+        <a href="{% url 'datasetapp:dataset-download' file_name=download_file_name %}">{{ dfile.file_type }}</a>
+        &nbsp;[{{ num_hits }} download{{ num_hits|pluralize }}]
+
+        {% if num_hits %}
+        <div id="downloads-sparkline"></div>
+        <script>
+        (function() {
+            var data = {{ download_series_json|safe }};
+            var el = document.getElementById('downloads-sparkline');
+            var chart = echarts.init(el);
+            chart.setOption({
+                grid: {left: 0, right: 0, top: 4, bottom: 4},
+                xAxis: {type: 'category', show: false, data: data.map(function(d){return d[0];})},
+                yAxis: {type: 'value', show: false, min: 0},
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        var p = params[0];
+                        return p.name + '<br/>' + p.value + ' download' + (p.value === 1 ? '' : 's');
+                    }
+                },
+                series: [{
+                    type: 'line', data: data.map(function(d){return d[1];}),
+                    showSymbol: false, smooth: false,
+                    lineStyle: {width: 1.5, color: '#3E6D8E'},
+                    areaStyle: {color: 'rgba(62,109,142,0.15)'}
+                }]
+            });
+            window.addEventListener('resize', function(){ chart.resize(); });
+        })();
+        </script>
+        {% endif %}
+
+        <p>(Right-click link; choose "<i>Save Link As</i>")</p>
+
+        <h4>Tags for this dataset</h4>
+        {% for tag in ds.tags.all %}
+        <span><a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{ tag.description }}">{{ tag }}</a></span>
+        {% endfor %}
+    </aside>
 </div>
+
 {% if preview_rows %}
-<div id="dataset-preview" style="clear: both; margin-top: 16px;">
+<div id="dataset-preview" style="margin-top: 24px;">
     <h4>Preview (first {{ preview_rows|length|add:"-1" }} rows)</h4>
-    <table class="table table-striped table-condensed">
-        <thead>
-            <tr>{% for cell in preview_rows.0 %}<th>{{ cell }}</th>{% endfor %}</tr>
-        </thead>
-        <tbody>
-            {% for row in preview_rows|slice:"1:" %}
-            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-striped table-condensed">
+            <thead>
+                <tr>{% for cell in preview_rows.0 %}<th>{{ cell }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for row in preview_rows|slice:"1:" %}
+                <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endif %}
-<div id="dataset-download">
-
-    <h4>Download</h4>
-
-    <a href="{% url 'datasetapp:dataset-download' file_name=download_file_name %}">{{ dfile.file_type }}</a>
-    &nbsp;&nbsp;&nbsp;&nbsp; [{{num_hits}} download{{num_hits|pluralize}}]
-
-    {% if num_hits %}
-    <div id="downloads-sparkline" style="width: 220px; height: 50px; margin-top: 6px;"></div>
-    <script>
-    (function() {
-        var data = {{ download_series_json|safe }};
-        var chart = echarts.init(document.getElementById('downloads-sparkline'));
-        chart.setOption({
-            grid: {left: 0, right: 0, top: 4, bottom: 4},
-            xAxis: {type: 'category', show: false, data: data.map(function(d){return d[0];})},
-            yAxis: {type: 'value', show: false, min: 0},
-            tooltip: {
-                trigger: 'axis',
-                formatter: function(params) {
-                    var p = params[0];
-                    return p.name + '<br/>' + p.value + ' download' + (p.value === 1 ? '' : 's');
-                }
-            },
-            series: [{
-                type: 'line', data: data.map(function(d){return d[1];}),
-                showSymbol: false, smooth: false,
-                lineStyle: {width: 1.5, color: '#3E6D8E'},
-                areaStyle: {color: 'rgba(62,109,142,0.15)'}
-            }]
-        });
-    })();
-    </script>
-    {% endif %}
-
-    <p>(Right-click link; choose "<i>Save Link As</i>")
-
-    <h4>Tags for this dataset</h4>
-    {% for tag in ds.tags.all %}
-    <span><a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a></span>
-    {% endfor %}
-
-</div>
 
 <script type="text/javascript"
     src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-<nav style="clear: both; margin-top: 24px; padding-top: 12px; border-top: 1px solid #DDDDDD;">
+<nav class="detail-nav">
     {% if prev_dataset %}
-        <span style="float: left;">&larr; <a href="{% url 'datasetapp:dataset-about-a-dataset' prev_dataset.slug %}">{{ prev_dataset.name }}</a></span>
+        <span class="nav-prev">&larr; <a href="{% url 'datasetapp:dataset-about-a-dataset' prev_dataset.slug %}">{{ prev_dataset.name }}</a></span>
     {% endif %}
     {% if next_dataset %}
-        <span style="float: right;"><a href="{% url 'datasetapp:dataset-about-a-dataset' next_dataset.slug %}">{{ next_dataset.name }}</a> &rarr;</span>
+        <span class="nav-next"><a href="{% url 'datasetapp:dataset-about-a-dataset' next_dataset.slug %}">{{ next_dataset.name }}</a> &rarr;</span>
     {% endif %}
 </nav>
 {% endblock %}

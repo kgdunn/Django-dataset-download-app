@@ -1,24 +1,22 @@
 <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
-body {
-    padding: 4px;
+body { margin: 0; padding: 0; }
+.page-container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    box-sizing: border-box;
 }
-.calculated-width {
-    width: -moz-calc(100% - 100px);
-    width: -webkit-calc(100% - 100px);
-    width: calc(100% - 100px);
-    display: inline-block;
-}
-A{
-	font-size:20px;
+@media (min-width: 768px) {
+    .page-container { padding: 20px 28px; }
 }
 .row {
-	vertical-align: top;
-	padding-top: 4px;
-}
-.td{
+    vertical-align: top;
+    padding-top: 4px;
 }
 .row-odd{
     background: #DDDDDD;
@@ -55,35 +53,67 @@ A{
     text-align: center;
     vertical-align: top;
 }
-.dataset-tag-left{
-    float: left;
-}
-.dataset-tag-right{
-    float: right;
-}
+.dataset-tag-left, .dataset-tag-right { float: none; }
 .dataset-results{
     display: block;
 }
 
-#dataset-content{
-    float: left;
-    width: 65%;
+/* Detail-page layout: stacked on mobile, side-by-side >=768px */
+.detail-grid { display: block; }
+@media (min-width: 768px) {
+    .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+        gap: 32px;
+        align-items: start;
+    }
 }
-#dataset-download{
-    width: 25%;
-    float: right;
+#dataset-content { min-width: 0; }
+#dataset-download { min-width: 0; }
+
+/* Metadata definition list — replaces the 25%/75% <table> */
+.dataset-meta { margin: 0 0 16px 0; }
+.dataset-meta dt { font-weight: 600; color: #555; margin-top: 8px; }
+.dataset-meta dd { margin: 2px 0 0 0; }
+@media (min-width: 600px) {
+    .dataset-meta {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        column-gap: 16px;
+        row-gap: 6px;
+    }
+    .dataset-meta dt { margin-top: 0; }
+    .dataset-meta dd { margin: 0; }
 }
-.dataset-title{
-    width: 30%;
-    vertical-align: top;
+
+.detail-topbar { margin: 0 0 8px 0; font-size: 14px; }
+.detail-topbar a { font-size: 14px; }
+
+#downloads-sparkline {
+    width: 100%;
+    max-width: 280px;
+    height: 50px;
+    margin-top: 6px;
 }
+
+.detail-nav {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid #DDD;
+}
+.detail-nav .nav-prev { margin-right: auto; }
+.detail-nav .nav-next { margin-left: auto; }
 </style>
 <title>{% block title%}{% endblock %}</title>
 </head>
 <body>
-<div class="well calculated-width">
+<div class="well page-container">
 <h1>OpenMV.net Datasets</h1>
 {% block body %}{% endblock %}
 </div>
-<div>(c) Kevin Dunn, <a style="font-size: 14px;"href="https://learnche.org">learnche.org</a></div>
+<div class="page-container">(c) Kevin Dunn, <a href="https://learnche.org">learnche.org</a></div>
 </body>

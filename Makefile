@@ -1,10 +1,31 @@
 SHELL := /bin/bash
 
-debug:
-	python manage.py collectstatic --no-input
-	python manage.py migrate
-	python manage.py createcachetable
-	python manage.py runserver 8080 --nostatic
+.PHONY: install migrate collectstatic test lint debug docker-up docker-down clean
+
+install:
+	uv sync --dev
+
+migrate:
+	uv run python manage.py migrate
+
+collectstatic:
+	uv run python manage.py collectstatic --no-input
+
+test:
+	uv run pytest
+
+lint:
+	uv run pre-commit run --all-files
+
+debug: collectstatic migrate
+	uv run python manage.py createcachetable
+	uv run python manage.py runserver 8080 --nostatic
+
+docker-up:
+	docker compose up --build
+
+docker-down:
+	docker compose down
 
 clean:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -16,11 +37,3 @@ clean:
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 	rm -rf static
-	python -m pip install --upgrade --force-reinstall pip
-	conda install -c conda-forge pre-commit --yes
-	python -m pip install --upgrade --prefer-binary --no-warn-script-location --use-deprecated=legacy-resolver -r requirements.txt
-	pre-commit install
-	# Builds the cache, if it doesn't exist already
-	git add .pre-commit-config.yaml
-	pre-commit
-	pre-commit autoupdate

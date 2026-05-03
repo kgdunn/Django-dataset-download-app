@@ -5,16 +5,18 @@
 Datasets{% endif %}{% endblock %}
 
 {% block body %}
-<div id="special_message">{{ special_message|safe|escape }}</div>
-
 {% if show_home_page %}
 <p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
-<h3>Showing data sets with "{{current_tag}}" tag</h3>
-<p>{{current_tag_description}}</p>
+<div class="tag-summary">
+    <h3>Showing data sets with "{{current_tag}}" tag</h3>
+    <p>{{current_tag_description}}</p>
+</div>
+{% else %}
+<div id="special_message">{{ special_message|safe|escape }}</div>
 {% endif %}
 
 <div class="dataset-results">
-    <table class="wikitable sortable dataset-table">
+    <table class="dataset-table">
         <colgroup>
             <col class="col-name">
             <col class="col-desc">
@@ -22,19 +24,19 @@ Datasets{% endif %}{% endblock %}
             <col class="col-cols">
             <col class="col-tags">
         </colgroup>
-        <thead class="dataset-header">
+        <thead>
             <tr>
                 <td>Name</td>
                 <td>Description</td>
-                <td id="rows">Rows</td>
-                <td id="cols">Columns</td>
+                <td>Rows</td>
+                <td>Columns</td>
                 <td>Tags</td>
             </tr>
         </thead>
         <tbody>
         {% for dataset in dataset_list %}
         {% spaceless %}
-        <tr class="{% cycle 'row-odd' 'row-even' %} dataset-row">
+        <tr class="dataset-row">
             <td><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a></td>
             <td>{{dataset.description|striptags}}</td>
             <td class="dataset-rows">{{dataset.rows}}</td>

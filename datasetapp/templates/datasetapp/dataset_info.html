@@ -81,6 +81,58 @@
     </aside>
 </div>
 
+{% if quickstart_url %}
+<section id="dataset-quickstart" class="quickstart">
+    <div class="quickstart__head">
+        <h4>Load this dataset in Python</h4>
+        <button type="button" class="code-copy-btn" data-copy-target="#quickstart-code"
+                aria-label="Copy code to clipboard">
+            <span class="code-copy-btn__icon" aria-hidden="true"></span>
+            <span class="code-copy-btn__label">Copy</span>
+        </button>
+    </div>
+    <pre class="code-block"><code id="quickstart-code" class="language-python">import pandas as pd
+
+df = pd.read_csv("{{ quickstart_url }}")
+df.describe()</code></pre>
+</section>
+<script>
+(function () {
+    document.querySelectorAll('.code-copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var sel = btn.getAttribute('data-copy-target');
+            var target = sel ? document.querySelector(sel) : null;
+            if (!target) return;
+            var text = target.textContent;
+            var done = function () {
+                var label = btn.querySelector('.code-copy-btn__label');
+                var original = label ? label.textContent : '';
+                btn.classList.add('is-copied');
+                if (label) label.textContent = 'Copied';
+                setTimeout(function () {
+                    btn.classList.remove('is-copied');
+                    if (label) label.textContent = original;
+                }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, function () {});
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'absolute';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); done(); } catch (e) {}
+                document.body.removeChild(ta);
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
+
 {% if preview_rows %}
 <div id="dataset-preview" class="preview-wrapper">
     <h4>Preview (first {{ preview_rows|length|add:"-1" }} rows)</h4>

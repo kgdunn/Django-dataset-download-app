@@ -37,6 +37,10 @@ repos:
     rev: 21.12b0
     hooks:
       - id: black
+        # black 21.12b0 imports `click._unicodefun` which was removed in
+        # click 8.1. Pin click until pre-commit hook versions are bumped
+        # in the follow-up issue.
+        additional_dependencies: ["click<8.1"]
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.12.0

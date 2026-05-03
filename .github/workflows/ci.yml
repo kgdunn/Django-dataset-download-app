@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (locked)
+        run: uv sync --frozen
+
+      # `openmv/settings.py` asserts that .env exists at import time, so the
+      # test runner blows up without one. Synthesize a minimal .env here.
+      # TODO: drop this once settings reads from os.environ first.
+      # Tracked in the "stop asserting .env exists" follow-up issue.
+      - name: Create stub .env for tests
+        run: |
+          cat > .env <<'EOF'
+          SECRET_KEY=ci-test-key
+          DJANGO_DEBUG=1
+          EOF
+
+      - name: Lint (pre-commit)
+        run: uv run pre-commit run --all-files --show-diff-on-failure --color always
+
+      - name: Test (pytest)
+        run: uv run pytest

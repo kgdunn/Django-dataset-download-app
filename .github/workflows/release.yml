@@ -1,0 +1,88 @@
+name: Release
+
+# Auto-tags and creates a GitHub Release whenever the version in
+# pyproject.toml changes on master and there is a matching `## v<version>`
+# section in RELEASES.md.
+#
+# To cut a new release: bump the `version` field in pyproject.toml in a PR,
+# add a `## v<new-version>` section at the top of RELEASES.md describing
+# the changes, and merge. This workflow does the rest.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - pyproject.toml
+      - RELEASES.md
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          version=$(awk -F'"' '/^version = /{print $2; exit}' pyproject.toml)
+          if [ -z "$version" ]; then
+            echo "::error::Could not read version from pyproject.toml"
+            exit 1
+          fi
+          tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag"         >> "$GITHUB_OUTPUT"
+          echo "Detected version: $version (tag: $tag)"
+
+      - name: Skip if release already exists
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $tag already exists; nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract release notes from RELEASES.md
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          awk -v tag="$tag" '
+            $0 == "## " tag       { found = 1; next }
+            found && /^## v/      { exit }
+            found                 { print }
+          ' RELEASES.md > release_notes.md
+
+          # Trim leading/trailing blank lines.
+          sed -i -e '/./,$!d' -e :a -e '/^\s*$/{$d;N;ba' -e '}' release_notes.md
+
+          if [ ! -s release_notes.md ]; then
+            echo "::error::No '## $tag' section found in RELEASES.md. Add one and re-run."
+            exit 1
+          fi
+
+          echo "--- release notes for $tag ---"
+          cat release_notes.md
+          echo "--- end ---"
+
+      - name: Create tag and GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$tag" \
+            --notes-file release_notes.md

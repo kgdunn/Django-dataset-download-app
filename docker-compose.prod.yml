@@ -37,6 +37,11 @@ services:
       SQL_HOST: db
       SQL_PORT: 5432
     volumes:
+      # openmv/settings.py reads the .env file at BASE_DIR / ".env" at import
+      # time (not just environment variables), so the file itself must be
+      # present in the container. .dockerignore excludes it from the image,
+      # so we bind-mount the host copy read-only.
+      - ./.env:/app/.env:ro
       - ./data/media:/app/media
       - ./data/static:/app/static
     ports:
@@ -45,14 +50,13 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
-             gunicorn openmv.wsgi:application
-                      --bind 0.0.0.0:8000
-                      --workers 3
-                      --access-logfile -
-                      --error-logfile -"
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        gunicorn openmv.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile -
 
 volumes:
   openmv_postgres_data:

@@ -80,7 +80,8 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 - **TLS**:
   - `openmv.net` and `www.openmv.net` use a **Cloudflare Origin Certificate** (15-year, signed by Cloudflare's internal CA) at `/etc/caddy/origin-certs/openmv.net/`. Cloudflare's edge serves a public-trusted cert to visitors and re-encrypts to origin in `Full (strict)` mode.
   - `test.openmv.net` uses Caddy-managed Let's Encrypt. It must stay **DNS-only** (grey cloud) in Cloudflare so the HTTP/TLS challenge can reach origin directly.
-- **Manual deploy** (auto-deploy via GitHub Actions in progress): from `/home/deploy/openmv/repo/`, run `git pull && docker compose -f docker-compose.prod.yml up -d --build`. The `web` container's startup command runs `migrate --noinput` and `collectstatic --noinput` before booting gunicorn.
+- **Auto-deploy**: every push to `master` fires `.github/workflows/deploy.yml`, which SSHes into Hetzner and triggers `bin/deploy-impl.sh`. The deploy script runs `docker compose -f docker-compose.prod.yml up -d --build` (which in turn runs `migrate --noinput` + `collectstatic --noinput` on container start, then boots gunicorn) and sanity-curls `127.0.0.1:8001`.
+- **Manual deploy** (rollback, hotfix, debugging): from `/home/deploy/openmv/repo/`, run `git pull && docker compose -f docker-compose.prod.yml up -d --build` directly.
 - **Public IPs**: IPv4 `178.104.167.195`, IPv6 `2a01:4f8:1c19:2380::1`. Behind Cloudflare's anycast for the apex; visible directly only for `test.openmv.net`.
 
 ## Gotchas worth knowing before editing

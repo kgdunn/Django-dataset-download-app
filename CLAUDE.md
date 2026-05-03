@@ -100,7 +100,7 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
   - Install everything: `uv sync --dev`
   - Add a runtime dep: `uv add <pkg>`; dev dep: `uv add --dev <pkg>`
   - Refresh the lockfile after manual edits: `uv lock`
-  - Django is pinned `>=4.2,<5.0` until 5.x has been smoke-tested on staging.
+  - Django is pinned `>=5.2,<5.3` (bumped from 4.2 LTS in v1.2.0). 5.2 is the current LTS series; the project intentionally tracks LTS releases only.
 - **Tests** run with `uv run pytest` (or `make test`). `pytest-django` is wired through `[tool.pytest.ini_options]` in `pyproject.toml`. Smoke suite lives in `datasetapp/tests/test_views.py`.
 - **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The pytest step boots a `postgres:16-alpine` service container, sets `DJANGO_SETTINGS_MODULE=openmv.settings.ci`, and injects `SECRET_KEY` + `POSTGRES_*` + `SQL_*` env vars directly via the workflow `env:` block — no `.env` file is created. Tests therefore run against the same database engine as production, catching Postgres-only behaviour that SQLite would silently paper over.
 - **Docker compose**: `docker-compose.yml` is for **local development** (volume-mounts the source for hot reload, runs `runserver` against SQLite via `openmv.settings.dev`). `docker-compose.prod.yml` is the **production** compose used on Hetzner (bind-mounts `.env` and `data/` dirs, sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod`, runs `migrate` + `collectstatic` + `gunicorn`, binds to loopback on offset ports `8001`/`5434`). Both use the same `Dockerfile`.

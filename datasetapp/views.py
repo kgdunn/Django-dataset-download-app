@@ -13,10 +13,7 @@ import datetime
 import io
 import itertools
 import json
-import logging.handlers
-
-# Standard library imports
-import os
+import logging
 
 # Django imports
 from django.core.cache import cache
@@ -30,20 +27,7 @@ from django.utils import timezone
 # Model imports
 from .models import DataFile, Dataset, Hit, Tag
 
-# Logging code
-# ---------------------
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-LOG_FILE_NAME = parent_dir + os.sep + "logfile.log"
 log_file = logging.getLogger("datasetapp")
-log_file.setLevel(logging.DEBUG)
-fh = logging.handlers.RotatingFileHandler(
-    LOG_FILE_NAME, maxBytes=5000000, backupCount=10
-)
-formatter = logging.Formatter(
-    ("%(asctime)s - %(name)s " "- %(levelname)s - %(message)s")
-)
-fh.setFormatter(formatter)
-log_file.addHandler(fh)
 
 
 def get_IP_address(request) -> str:

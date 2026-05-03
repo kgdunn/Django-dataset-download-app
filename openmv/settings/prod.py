@@ -19,6 +19,20 @@ CSRF_TRUSTED_ORIGINS = [
     "https://test.openmv.net",
 ]
 
+# Security headers (issue #12). HSTS is staged: start at 300 s to verify the
+# proxy is forwarding X-Forwarded-Proto correctly, then bump to 31536000
+# (1 year) via SECURE_HSTS_SECONDS in .env and flip SECURE_HSTS_PRELOAD to True
+# once confirmed on staging + prod.
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = int(env("SECURE_HSTS_SECONDS", "300") or "300")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = "DENY"
+
 _db_keys = ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "SQL_HOST", "SQL_PORT"]
 _db_settings = {}
 for _key in _db_keys:
@@ -36,5 +50,6 @@ DATABASES = {
         "PASSWORD": _db_settings["POSTGRES_PASSWORD"],
         "HOST": _db_settings["SQL_HOST"],
         "PORT": _db_settings["SQL_PORT"],
+        "CONN_MAX_AGE": 60,
     }
 }

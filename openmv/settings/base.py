@@ -138,3 +138,34 @@ MEDIA_ROOT = BASE_DIR / "media"
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Logging
+# https://docs.djangoproject.com/en/stable/topics/logging/
+#
+# Console-only by design: in dev the lines stream to the `runserver` terminal,
+# and in prod gunicorn-under-Docker captures stdout/stderr so `docker logs`
+# (and any host log shipper) sees them. Override the `datasetapp` log level
+# via `DATASETAPP_LOG_LEVEL` for occasional debug runs.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "loggers": {
+        "datasetapp": {
+            "handlers": ["console"],
+            "level": env("DATASETAPP_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
+}

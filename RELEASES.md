@@ -20,6 +20,29 @@ project on the same LTS-only cadence.
 - **CLAUDE.md**: the "Tooling" section now reflects the new pin and notes
   the bump rationale; the "Outstanding work" referent (#35) is now closed.
 
+## v1.1.1
+
+Documentation cleanup: bring `README.md`, `CLAUDE.md`, and the
+`docker-compose.prod.yml` comments back into sync with the production stack.
+
+- `README.md`: the production-notes paragraph still claimed "the live site
+  has Apache serving `/static/` and `/media/` directly" and that "in
+  production Apache must be configured to intercept `/media/`" — both stale
+  since the May 2026 Hetzner cutover, when host-installed Caddy took over
+  TLS, static files, and `/media/` from Apache on Linode. Updated to refer
+  to Caddy and to the `data/static/` + `data/media/` bind mounts; also
+  corrected the dev-server condition from the legacy `DJANGO_DEBUG=1` to
+  the actual `DEBUG=True`.
+- `CLAUDE.md` + `docker-compose.prod.yml`: rewrote the `.env` bind-mount
+  paragraph and the matching compose comment. Both still implied the
+  bind-mount was required because `openmv/settings/base.py` read the file
+  at import time. After #22 landed (PR #60), settings read `os.environ`
+  first, and `env_file: .env` in the compose file already exposes every
+  key as a process env var. The bind-mount is now a redundant fallback for
+  the `dotenv_values()` codepath, not a requirement.
+
+No behaviour change — docs only, hence PATCH.
+
 ## v1.1.0
 
 CI now runs the test suite against Postgres 16 to match production, closing

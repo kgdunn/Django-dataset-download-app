@@ -58,6 +58,40 @@ body { margin: 0; padding: 0; }
     display: block;
 }
 
+/* Homepage list table — predictable column widths so wide content wraps
+   instead of pushing the layout past the viewport. */
+.dataset-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+.dataset-table td {
+    padding: 6px 8px;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+.dataset-table .col-name { width: 18%; }
+.dataset-table .col-desc { width: auto; }
+.dataset-table .col-rows { width: 8%; }
+.dataset-table .col-cols { width: 10%; }
+.dataset-table .col-tags { width: 22%; }
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+@media (max-width: 600px) {
+    .dataset-table .col-rows,
+    .dataset-table .col-cols { width: 0; }
+    .dataset-table thead td:nth-child(3),
+    .dataset-table thead td:nth-child(4),
+    .dataset-table tbody td:nth-child(3),
+    .dataset-table tbody td:nth-child(4) { display: none; }
+    .dataset-table .col-name { width: 30%; }
+    .dataset-table .col-tags { width: 26%; }
+}
+
 /* Detail-page layout: stacked on mobile, side-by-side >=768px */
 .detail-grid { display: block; }
 @media (min-width: 768px) {

@@ -9,6 +9,7 @@ See https://docs.djangoproject.com/en/stable/topics/settings/ for an overview
 and https://docs.djangoproject.com/en/stable/ref/settings/ for the full list.
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -16,13 +17,33 @@ from dotenv import dotenv_values
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-dotenv_file = BASE_DIR / ".env"
-assert Path(dotenv_file).parent.exists(), f"{dotenv_file} directory does not exist"
-assert Path(dotenv_file).exists(), f"{dotenv_file} does not exist"
+# Read configuration from process environment first, then fall back to a `.env`
+# file if present. This lets containers / CI inject config directly without
+# needing to write a `.env`, while keeping the file-based workflow for local dev.
+_dotenv_path = BASE_DIR / ".env"
+_dotenv = dotenv_values(dotenv_path=_dotenv_path) if _dotenv_path.exists() else {}
+
+
+def env(key: str, default: str | None = None) -> str | None:
+    """Read a config value from os.environ, falling back to .env, then default."""
+    value = os.environ.get(key)
+    if value is not None:
+        return value
+    value = _dotenv.get(key)
+    if value is not None:
+        return value
+    return default
+
+
+def env_list(key: str, default: str) -> list[str]:
+    """Read a comma-separated env value as a list of stripped, non-empty entries."""
+    raw = env(key, default) or ""
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = dotenv_values(dotenv_path=dotenv_file).get("SECRET_KEY", None)
-assert SECRET_KEY is not None
+SECRET_KEY = env("SECRET_KEY")
+assert SECRET_KEY, "SECRET_KEY must be set via environment variable or .env file"
 
 # Application definition
 INSTALLED_APPS = [

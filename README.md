@@ -67,7 +67,8 @@ uv sync --dev
 cp .env.example .env
 # Edit .env: set SECRET_KEY to any random string. The Postgres keys are
 # only consulted by openmv.settings.prod, so they can stay as the
-# placeholders for local dev.
+# placeholders for local dev. (Settings read process env first, so you
+# can also export SECRET_KEY directly and skip the .env file entirely.)
 
 # 4. Run the dev server (collectstatic + migrate + createcachetable + runserver:8080)
 make debug
@@ -92,8 +93,8 @@ Create a superuser with `uv run python manage.py createsuperuser` (native) or `d
 
 ## Production notes
 
-- Production sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod` (wired in `docker-compose.prod.yml`), which selects PostgreSQL via `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SQL_HOST`, `SQL_PORT` from `.env` and turns off `DEBUG`.
-- `ALLOWED_HOSTS` is hardcoded to `.openmv.net` and `127.0.0.1` in `openmv/settings/prod.py`. Change it there for other deployments.
+- Production sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod` (wired in `docker-compose.prod.yml`), which selects PostgreSQL via `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SQL_HOST`, `SQL_PORT` from the environment (or `.env`) and turns off `DEBUG`. Settings read process environment first, then fall back to `.env`, so containers/CI can inject config directly.
+- `ALLOWED_HOSTS` reads from the `ALLOWED_HOSTS` env var (comma-separated). Defaults: `.openmv.net,127.0.0.1` in prod, `127.0.0.1,localhost` in dev. Override the env var to deploy under a different hostname.
 - Static files land in `BASE_DIR / 'static'` after `python manage.py collectstatic`. Admin-uploaded dataset files land in `BASE_DIR / 'media'` (`MEDIA_ROOT`), reachable at `/media/` (`MEDIA_URL`). The live site has Apache serving `/static/` and `/media/` directly; the `download_dataset` view returns a 302 to the `/media/...` URL rather than streaming the file through Django. Locally, `runserver` serves `/media/` only when `DJANGO_DEBUG=1` (see `openmv/urls.py`); in production Apache must be configured to intercept `/media/` before the request reaches Django.
 - The `Hit` table grows with every download. There is no automatic pruning.
 

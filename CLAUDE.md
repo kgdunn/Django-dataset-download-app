@@ -31,10 +31,10 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
 ## How it runs
 
 - `make debug` runs `collectstatic --no-input`, `migrate`, `createcachetable`, then `runserver 8080 --nostatic`.
-- Settings load `.env` via `python-dotenv`'s `dotenv_values()`. The file is **required** — `openmv/settings/base.py` asserts it exists on import (CI synthesises a stub).
+- Settings read **process environment first**, then fall back to a `.env` file via `python-dotenv` if one exists. The `env()` and `env_list()` helpers in `openmv/settings/base.py` encapsulate this. `SECRET_KEY` is the only universally required key; `prod.py` additionally requires the `POSTGRES_*` + `SQL_*` keys. Either layer (env or `.env`) can supply them — handy for containers, CI, and ad-hoc overrides.
 - Which DB / hosts / DEBUG flag you get depends on `DJANGO_SETTINGS_MODULE`:
-  - `openmv.settings.dev` (default in `manage.py`, `wsgi.py`, `asgi.py`, `pyproject.toml` pytest) → SQLite at `db.sqlite3`, `DEBUG=True`, `ALLOWED_HOSTS=['127.0.0.1', 'localhost']`.
-  - `openmv.settings.prod` (forced by `docker-compose.prod.yml`'s `web.environment` block) → Postgres via `POSTGRES_*` + `SQL_*` keys, `DEBUG=False`, `ALLOWED_HOSTS=['.openmv.net', '127.0.0.1']`, `SECURE_PROXY_SSL_HEADER` + `CSRF_TRUSTED_ORIGINS` for Caddy.
+  - `openmv.settings.dev` (default in `manage.py`, `wsgi.py`, `asgi.py`, `pyproject.toml` pytest) → SQLite at `db.sqlite3`, `DEBUG=True`, `ALLOWED_HOSTS` from `$ALLOWED_HOSTS` (default `127.0.0.1,localhost`).
+  - `openmv.settings.prod` (forced by `docker-compose.prod.yml`'s `web.environment` block) → Postgres via `POSTGRES_*` + `SQL_*` keys, `DEBUG=False`, `ALLOWED_HOSTS` from `$ALLOWED_HOSTS` (default `.openmv.net,127.0.0.1`), `SECURE_PROXY_SSL_HEADER` + `CSRF_TRUSTED_ORIGINS` for Caddy.
 
 ## Running locally
 
@@ -74,7 +74,7 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
   - `media/` — Django uploads served by Caddy and mounted into the container as `/app/media`.
   - `static/` — `collectstatic` output, mounted as `/app/static`. Re-populated by the `web` container's startup command.
   - `public/` — host the small files Apache used to alias (`robots.txt`, `favicon.ico`, `blender-efficiency.xlsx`).
-- **`.env`** is **bind-mounted** into the container (`./.env:/app/.env:ro`) because `openmv/settings/base.py` reads the file at import time and `.dockerignore` excludes it from the image. Never commit `.env`.
+- **`.env`** is **bind-mounted** into the container (`./.env:/app/.env:ro`) so `openmv/settings/base.py` finds it on import. Settings now read process env first, so an alternative is to drop the bind-mount and set the same keys in `web.environment` directly — but the bind-mount is currently the simpler path because it keeps the `POSTGRES_*` / `SQL_*` / `SECRET_KEY` config in one place. Never commit `.env`.
 - **`DJANGO_SETTINGS_MODULE=openmv.settings.prod`** is set on the `web` service in `docker-compose.prod.yml`; this is what selects the prod-only DB / hosts / proxy headers. Don't rely on the `manage.py` default for production.
 - **Caddy config**: `/etc/caddy/Caddyfile` on the host. Reload with `sudo systemctl reload caddy` (validate first with `sudo caddy validate --config /etc/caddy/Caddyfile`).
 - **TLS**:
@@ -101,7 +101,7 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
   - Refresh the lockfile after manual edits: `uv lock`
   - Django is pinned `>=4.2,<5.0` until 5.x has been smoke-tested on staging.
 - **Tests** run with `uv run pytest` (or `make test`). `pytest-django` is wired through `[tool.pytest.ini_options]` in `pyproject.toml`. Smoke suite lives in `datasetapp/tests/test_views.py`.
-- **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The job synthesizes a stub `.env` because `openmv/settings/base.py` asserts one exists at import — see the "stop asserting `.env` exists" follow-up issue.
+- **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The pytest step injects `SECRET_KEY` directly via the workflow `env:` block — no `.env` file is created.
 - **Docker compose**: `docker-compose.yml` is for **local development** (volume-mounts the source for hot reload, runs `runserver` against SQLite via `openmv.settings.dev`). `docker-compose.prod.yml` is the **production** compose used on Hetzner (bind-mounts `.env` and `data/` dirs, sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod`, runs `migrate` + `collectstatic` + `gunicorn`, binds to loopback on offset ports `8001`/`5434`). Both use the same `Dockerfile`.
 - **pre-commit** is configured (`.pre-commit-config.yaml`) — hooks are kept on current stable releases (`pre-commit-hooks` v5, `mypy` v1.13, `isort` 5.13, `black` 24.10, `blacken-docs` 1.19, `flake8` 7.1). Refresh with `pre-commit autoupdate` and re-run `pre-commit run --all-files` before merging.
 - **flake8** config: `.flake8`. Line length 100. Ignores E266/E203/E231/W503.

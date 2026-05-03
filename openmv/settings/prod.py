@@ -1,13 +1,11 @@
 """Production settings: Postgres + DEBUG=False + Caddy/Cloudflare proxy headers."""
 
-from dotenv import dotenv_values
-
 from .base import *  # noqa: F401,F403
-from .base import dotenv_file
+from .base import env, env_list
 
 DEBUG = False
 
-ALLOWED_HOSTS = [".openmv.net", "127.0.0.1"]
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", ".openmv.net,127.0.0.1")
 
 # Caddy terminates TLS on the host and proxies plain HTTP to gunicorn.
 # This header tells Django the request was originally HTTPS.
@@ -24,8 +22,10 @@ CSRF_TRUSTED_ORIGINS = [
 _db_keys = ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "SQL_HOST", "SQL_PORT"]
 _db_settings = {}
 for _key in _db_keys:
-    _value = dotenv_values(dotenv_path=dotenv_file).get(_key, None)
-    assert _value is not None, f"{_key} is not set in the .env file"
+    _value = env(_key)
+    assert (
+        _value is not None
+    ), f"{_key} must be set via environment variable or .env file"
     _db_settings[_key] = _value
 
 DATABASES = {

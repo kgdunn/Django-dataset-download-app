@@ -18,17 +18,10 @@ class DatasetAdmin(admin.ModelAdmin):
 class HitAdmin(admin.ModelAdmin):
     list_per_page = 2000
     list_display = (
-        "UA_string",
         "dataset_hit",
         "date_and_time",
-        "IP_address",
-        "referrer",
     )
-    list_filter = (
-        "UA_string",
-        "IP_address",
-        "dataset_hit",
-    )
+    list_filter = ("dataset_hit",)
 
 
 class DataFileAdmin(admin.ModelAdmin):

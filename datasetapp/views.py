@@ -170,6 +170,16 @@ def about_dataset(request, dataset_name=None):
     dfile = files[0]
     download_file_name = f"{ds.slug}.{dfile.file_type.lower()}"
 
+    # Python quickstart (only when a CSV is available).
+    quickstart_url = None
+    if csv_file is not None and not ds.is_hidden:
+        quickstart_url = request.build_absolute_uri(
+            django_reverse(
+                "datasetapp:dataset-download",
+                kwargs={"file_name": f"{ds.slug}.csv"},
+            )
+        )
+
     context = {
         "ds": ds,
         "dfile": dfile,
@@ -178,6 +188,7 @@ def about_dataset(request, dataset_name=None):
         "prev_dataset": prev_dataset,
         "next_dataset": next_dataset,
         "preview_rows": preview_rows,
+        "quickstart_url": quickstart_url,
         "download_series_json": json.dumps(_download_series(ds)),
     }
     return TemplateResponse(request, "datasetapp/dataset_info.html", context)

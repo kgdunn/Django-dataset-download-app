@@ -38,10 +38,12 @@ services:
       SQL_HOST: db
       SQL_PORT: 5432
     volumes:
-      # openmv/settings/base.py reads the .env file at BASE_DIR / ".env" at
-      # import time (not just environment variables), so the file itself must
-      # be present in the container. .dockerignore excludes it from the image,
-      # so we bind-mount the host copy read-only.
+      # env_file: above already exports every .env key as an environment
+      # variable, and openmv/settings/base.py reads os.environ first (since
+      # #22 landed in PR #60), so the bind-mount below is no longer required.
+      # We keep it as a redundant fallback for the dotenv_values() codepath in
+      # base.py — .dockerignore excludes the host .env from the image, so the
+      # only way for that fallback to find values is via this bind-mount.
       - ./.env:/app/.env:ro
       - ./data/media:/app/media
       - ./data/static:/app/static

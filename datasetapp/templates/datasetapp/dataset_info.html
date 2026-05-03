@@ -10,21 +10,23 @@
 <div class="detail-grid">
     <div id="dataset-content">
         <dl class="dataset-meta">
-            <dt>Description:</dt>        <dd>{{ ds.description|safe }}</dd>
-            <dt>Data source:</dt>        <dd>{{ ds.data_source|safe }}</dd>
-            <dt>Data shape:</dt>         <dd>{{ ds.rows }} rows and {{ ds.cols }} columns</dd>
-            <dt>Usage restrictions:</dt> <dd>{{ ds.usage_restrictions }}</dd>
-            <dt>Contact person:</dt>     <dd>{{ ds.author_name }}</dd>
-            <dt>Contact details:</dt>    <dd>{{ ds.author_email }}</dd>
-            <dt>Added here on:</dt>      <dd>{{ ds.created_on|date:"d F Y G:i" }}</dd>
-            <dt>Last updated:</dt>       <dd>{{ ds.updated_on|date:"d F Y G:i" }}</dd>
+            <dt>Description</dt>        <dd>{{ ds.description|safe }}</dd>
+            <dt>Data source</dt>        <dd>{{ ds.data_source|safe }}</dd>
+            <dt>Data shape</dt>         <dd><span class="numeric">{{ ds.rows }}</span> rows and <span class="numeric">{{ ds.cols }}</span> columns</dd>
+            <dt>Usage restrictions</dt> <dd>{{ ds.usage_restrictions }}</dd>
+            <dt>Contact person</dt>     <dd>{{ ds.author_name }}</dd>
+            <dt>Contact details</dt>    <dd>{{ ds.author_email }}</dd>
+            <dt>Added here on</dt>      <dd>{{ ds.created_on|date:"d F Y G:i" }}</dd>
+            <dt>Last updated</dt>       <dd>{{ ds.updated_on|date:"d F Y G:i" }}</dd>
         </dl>
     </div>
 
-    <aside id="dataset-download">
-        <h4>Download</h4>
-        <a href="{% url 'datasetapp:dataset-download' file_name=download_file_name %}">{{ dfile.file_type }}</a>
-        &nbsp;[{{ num_hits }} download{{ num_hits|pluralize }}]
+    <aside id="dataset-download" class="download-card">
+        <p class="eyebrow">Download</p>
+        <a class="download-cta" href="{% url 'datasetapp:dataset-download' file_name=download_file_name %}">
+            Download <span class="download-cta__type">{{ dfile.file_type }}</span>
+        </a>
+        <p class="download-meta">{{ num_hits }} download{{ num_hits|pluralize }}</p>
 
         {% if num_hits %}
         <div id="downloads-sparkline"></div>
@@ -33,43 +35,57 @@
             var data = {{ download_series_json|safe }};
             var el = document.getElementById('downloads-sparkline');
             var chart = echarts.init(el);
-            chart.setOption({
-                grid: {left: 0, right: 0, top: 4, bottom: 4},
-                xAxis: {type: 'category', show: false, data: data.map(function(d){return d[0];})},
-                yAxis: {type: 'value', show: false, min: 0},
-                tooltip: {
-                    trigger: 'axis',
-                    formatter: function(params) {
-                        var p = params[0];
-                        return p.name + '<br/>' + p.value + ' download' + (p.value === 1 ? '' : 's');
-                    }
-                },
-                series: [{
-                    type: 'line', data: data.map(function(d){return d[1];}),
-                    showSymbol: false, smooth: false,
-                    lineStyle: {width: 1.5, color: '#3E6D8E'},
-                    areaStyle: {color: 'rgba(62,109,142,0.15)'}
-                }]
-            });
+            function readVar(name, fallback) {
+                var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+                return (v && v.trim()) || fallback;
+            }
+            function buildOption() {
+                return {
+                    grid: {left: 0, right: 0, top: 4, bottom: 4},
+                    xAxis: {type: 'category', show: false, data: data.map(function(d){return d[0];})},
+                    yAxis: {type: 'value', show: false, min: 0},
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: readVar('--chart-tooltip-bg', '#fff'),
+                        textStyle: {color: readVar('--chart-tooltip-fg', '#0e1414')},
+                        formatter: function(params) {
+                            var p = params[0];
+                            return p.name + '<br/>' + p.value + ' download' + (p.value === 1 ? '' : 's');
+                        }
+                    },
+                    series: [{
+                        type: 'line', data: data.map(function(d){return d[1];}),
+                        showSymbol: false, smooth: false,
+                        lineStyle: {width: 1.5, color: readVar('--chart-line', '#0e7c7b')},
+                        areaStyle: {color: readVar('--chart-area', 'rgba(14,124,123,0.16)')}
+                    }]
+                };
+            }
+            chart.setOption(buildOption());
             window.addEventListener('resize', function(){ chart.resize(); });
+            document.addEventListener('themechange', function() { chart.setOption(buildOption(), true); });
         })();
         </script>
         {% endif %}
 
-        <p>(Right-click link; choose "<i>Save Link As</i>")</p>
+        <p class="download-hint">(Right-click link; choose "<i>Save Link As</i>")</p>
 
-        <h4>Tags for this dataset</h4>
-        {% for tag in ds.tags.all %}
-        <span><a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{ tag.description }}">{{ tag }}</a></span>
-        {% endfor %}
+        <div class="tag-section">
+            <p class="eyebrow">Tags for this dataset</p>
+            <div class="tag-list">
+            {% for tag in ds.tags.all %}
+            <a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{ tag.description }}">{{ tag }}</a>
+            {% endfor %}
+            </div>
+        </div>
     </aside>
 </div>
 
 {% if preview_rows %}
-<div id="dataset-preview" style="margin-top: 24px;">
+<div id="dataset-preview" class="preview-wrapper">
     <h4>Preview (first {{ preview_rows|length|add:"-1" }} rows)</h4>
-    <div class="table-responsive">
-        <table class="table table-striped table-condensed">
+    <div class="preview-scroll">
+        <table class="preview-table">
             <thead>
                 <tr>{% for cell in preview_rows.0 %}<th>{{ cell }}</th>{% endfor %}</tr>
             </thead>

@@ -5,19 +5,26 @@
 Future enhancements
 -------------------
 Return better 404's
-Show the first 10 rows and K columns on the dataset
-Links to go the next and previous datasets
 
 """
+import csv
+import datetime
+import io
+import itertools
+import json
 import logging.handlers
 
 # Standard library imports
 import os
 
 # Django imports
+from django.core.cache import cache
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import reverse as django_reverse
+from django.utils import timezone
 
 # Model imports
 from .models import DataFile, Dataset, Hit, Tag
@@ -85,6 +92,51 @@ def display_all(request):
     return TemplateResponse(request, "datasetapp/all_datasets.html", context)
 
 
+def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
+    """First ``max_rows`` data rows of a CSV ``DataFile`` (header + rows), or None."""
+    if file_obj is None or file_obj.file_type.upper() != "CSV":
+        return None
+    cache_key = f"csv_preview:{file_obj.id}:{max_rows}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        with file_obj.link_to_file.open("rb") as fh:
+            raw = fh.read(max_bytes)
+        text = raw.decode("utf-8", errors="replace")
+        try:
+            dialect = csv.Sniffer().sniff(text[:2048], delimiters=",;\t")
+        except csv.Error:
+            dialect = csv.excel
+        reader = csv.reader(io.StringIO(text), dialect)
+        rows = list(itertools.islice(reader, max_rows + 1))
+    except Exception as e:
+        log_file.warning("CSV preview failed for DataFile %s: %s", file_obj.id, e)
+        rows = None
+    cache.set(cache_key, rows, 60 * 60)
+    return rows
+
+
+def _download_series(dataset, days=365):
+    """List of ``[yyyy-mm-dd, count]`` pairs for the last ``days`` days, zero-filled."""
+    today = timezone.now().date()
+    start = today - datetime.timedelta(days=days - 1)
+    counts = (
+        Hit.objects.filter(dataset_hit__dataset=dataset, date_and_time__date__gte=start)
+        .annotate(day=TruncDate("date_and_time"))
+        .values("day")
+        .annotate(n=Count("id"))
+    )
+    counts_by_day = {row["day"]: row["n"] for row in counts}
+    return [
+        [
+            (start + datetime.timedelta(days=i)).isoformat(),
+            counts_by_day.get(start + datetime.timedelta(days=i), 0),
+        ]
+        for i in range(days)
+    ]
+
+
 def about_dataset(request, dataset_name=None):
     """
     Displays more information about a dataset
@@ -97,11 +149,31 @@ def about_dataset(request, dataset_name=None):
         log_file.error("An invalid dataset was requested: %s", dataset_name.lower())
         return HttpResponseRedirect(django_reverse("datasetapp:dataset-home-page"))
 
-    files = DataFile.objects.filter(dataset=ds[0])
+    ds = ds[0]
+    files = DataFile.objects.filter(dataset=ds)
+
+    # Prev/next navigation: use the same slug ordering as the homepage table.
+    ordered_slugs = list(
+        Dataset.objects.order_by("slug").values_list("slug", flat=True)
+    )
+    idx = ordered_slugs.index(ds.slug)
+    prev_slug = ordered_slugs[idx - 1] if idx > 0 else None
+    next_slug = ordered_slugs[idx + 1] if idx < len(ordered_slugs) - 1 else None
+    prev_dataset = Dataset.objects.get(slug=prev_slug) if prev_slug else None
+    next_dataset = Dataset.objects.get(slug=next_slug) if next_slug else None
+
+    # CSV preview (skip when dataset is hidden, defence in depth).
+    csv_file = files.filter(file_type__iexact="CSV").first()
+    preview_rows = _csv_preview(csv_file) if not ds.is_hidden else None
+
     context = {
-        "ds": ds[0],
+        "ds": ds,
         "dfile": files[0],
         "num_hits": Hit.objects.filter(dataset_hit=files[0]).count(),
+        "prev_dataset": prev_dataset,
+        "next_dataset": next_dataset,
+        "preview_rows": preview_rows,
+        "download_series_json": json.dumps(_download_series(ds)),
     }
     return TemplateResponse(request, "datasetapp/dataset_info.html", context)
 

@@ -26,6 +26,7 @@
         <a class="download-cta" href="{% url 'datasetapp:dataset-download' file_name=download_file_name %}">
             Download <span class="download-cta__type">{{ dfile.file_type }}</span>
         </a>
+        <p class="download-hint">(Right-click link; choose "<i>Save Link As</i>")</p>
         <p class="download-meta">{{ num_hits }} download{{ num_hits|pluralize }}</p>
 
         {% if num_hits %}
@@ -67,8 +68,6 @@
         })();
         </script>
         {% endif %}
-
-        <p class="download-hint">(Right-click link; choose "<i>Save Link As</i>")</p>
 
         <div class="tag-section">
             <p class="eyebrow">Tags for this dataset</p>

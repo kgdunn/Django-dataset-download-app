@@ -22,9 +22,9 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
   - `about_dataset` — `/info/<slug>` — detail page.
   - `download_dataset` — `/file/<name>.<ext>` — increments a `Hit` row, then 302-redirects to the media URL of the matching `DataFile`. The actual bytes are served by the front-end web server (Apache), not by Django.
 - **Templates** (`datasetapp/templates/datasetapp/`):
-  - `base.html` — Bootstrap 3 layout, inline `<style>`, no static-file dependency.
+  - `base.html` — Bootstrap 3 layout, inline `<style>`, no static-file dependency. Loads ECharts (CDN) for the detail-page sparkline.
   - `all_datasets.html` — the list page.
-  - `dataset_info.html` — the detail page; pulls in MathJax for any LaTeX in descriptions.
+  - `dataset_info.html` — the detail page. Pulls in MathJax for any LaTeX in descriptions, renders a 365-day downloads sparkline (ECharts) below the download counter, an inline CSV preview table (first 10 rows) above the download block, and prev/next dataset links at the bottom.
 - **Custom template tag**: `datasetapp/templatetags/extra_tags.py` defines a `slice_string` filter used in templates to trim filenames.
 - **Admin**: registered in `datasetapp/admin.py` with `list_per_page = 2000` (deliberate — small dataset count).
 

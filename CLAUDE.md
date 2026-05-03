@@ -82,49 +82,10 @@ Both paths serve <http://127.0.0.1:8080/>.
 - Production deploys ship from `master`.
 - Modernization work happens on `claude/modernize-legacy-repo-*` branches and is reviewed before merge.
 
-## Future improvements (TODO)
+## Outstanding work
 
-Roughly ordered by safety × value. Pick from the top.
+The GitHub issue tracker is the single source of truth for outstanding work: <https://github.com/kgdunn/Django-dataset-download-app/issues>. Don't duplicate the list here — it goes stale.
 
-### Safety net (do before touching production behaviour)
+## Keeping this file consistent
 
-- [x] **Pin dependencies.** Done via `pyproject.toml` + `uv.lock`. Django is bounded `>=4.2,<5.0`.
-- [x] **Add a `.python-version`** capturing Python 3.11.
-- [x] **Add a smoke-test `pytest` suite** (`datasetapp/tests/test_views.py`): home / about / tag / download happy paths plus the unknown-slug redirect.
-- [x] **Add a GitHub Actions CI workflow** (`.github/workflows/ci.yml`) that runs `pre-commit run --all-files` and `pytest` on push and on PR.
-
-### Latent bugs (small, well-scoped)
-
-- [ ] **Fix `DatasetManager.get_query_set` → `get_queryset`** in `datasetapp/models.py:18-21`. Verify with the site owner which `is_hidden=True` datasets currently leak onto the homepage; some may need to be unhidden before the rename. _(Tracked in #TBD.)_
-- [ ] **Replace `Dataset.objects.filter(slug=…)[0]`** in `about_dataset` and `download_dataset` with `.first()` plus an explicit `None` check, while preserving the existing 404 / redirect behaviour.
-- [ ] **Replace hardcoded `/info/`, `/file/`, `/tag/` paths in templates** with `{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}` etc.
-
-### Tooling refresh (dev-only, low blast radius)
-
-- [ ] **Update `.pre-commit-config.yaml`** to current hook versions: `pre-commit-hooks` v4.5+, `black` 24.x, `isort` 5.13+, `flake8` 7.x, `mypy` 1.x, `blacken-docs` 1.16+. Run `pre-commit autoupdate`. _(Tracked in #TBD.)_
-- [x] **Drop `conda` from `Makefile`**; switched to `uv` everywhere. The deprecated `--use-deprecated=legacy-resolver` flag is gone.
-- [x] **Add `make collectstatic`, `make migrate`, `make test`, `make lint`** as separate targets.
-- [ ] **Add an `.editorconfig`** so editors agree on indentation and line endings.
-
-### Settings, deployment, security
-
-- [ ] **Split `openmv/settings.py`** into `settings/base.py`, `settings/dev.py`, `settings/prod.py`; pick via `DJANGO_SETTINGS_MODULE`. _(Tracked in #TBD; prerequisite for prod-Docker.)_
-- [ ] **Stop asserting `.env` exists**; read from `os.environ` first and fall back to a dotenv file. This unblocks containerized hosts that inject env vars directly. Consider switching from `python-dotenv` to `django-environ` or `environs`. _(Tracked in #TBD; removes the `.env` synthesis hack in CI.)_
-- [ ] **Move `ALLOWED_HOSTS` into the environment** so non-`openmv.net` deploys (staging, preview) don't need a code change. _(Tracked in #TBD.)_
-- [ ] **Add production security headers** in `settings/prod.py`: `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`, `SECURE_HSTS_INCLUDE_SUBDOMAINS`, `SECURE_PROXY_SSL_HEADER`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `CSRF_TRUSTED_ORIGINS=['https://openmv.net','https://www.openmv.net']`. Roll out behind the existing reverse proxy and verify before merging. _(Tracked in #TBD.)_
-- [ ] **Configure `MEDIA_URL` / `MEDIA_ROOT` explicitly** so `runserver` can serve media in development. Document the production handoff to Apache.
-- [ ] **Configure `DATABASES['default']['CONN_MAX_AGE']`** for PostgreSQL connection reuse.
-- [ ] **Add a Django `LOGGING` dict** and remove the ad-hoc `RotatingFileHandler` that `datasetapp/views.py` configures at import time. _(Tracked in #TBD.)_
-- [ ] **Add `whitenoise`** for static file serving so deployments don't need Apache config to ship CSS. _(Tracked in #TBD.)_
-- [ ] **Add a Postgres service to CI** so tests run against the production backend. _(Tracked in #TBD; depends on settings split.)_
-- [ ] **Production Docker deploy** — gunicorn-in-Docker behind Apache, or fully replace Apache. _(Tracked in #TBD; depends on settings split + ALLOWED_HOSTS env + WhiteNoise.)_
-
-### Bigger projects
-
-- [ ] **Upgrade Bootstrap 3 → 5** with template rewrites (class names change: `well`, grid columns, navbar, etc.). Schedule alongside a visual redesign.
-- [ ] **Migrate to Django 5.x** once the test suite is in place.
-- [x] **Add a `Dockerfile` + `docker-compose.yml`** with a Postgres service for reproducible local dev. _(Local-dev only; production-Docker is tracked separately under "Settings, deployment, security".)_
-- [ ] **Tag a `v1.0.0` release** so production rollbacks have a target.
-- [ ] **GDPR / privacy review of the `Hit` table.** It currently stores raw IPs and full UA strings forever. Options: truncate IPs (`/24` for IPv4, `/64` for IPv6), add a retention policy / cron-based pruning, or replace with a counter that doesn't keep PII.
-- [ ] **Add Next/Previous dataset links on the detail page** (already noted as a TODO inside `views.py` and `dataset_info.html`).
-- [ ] **Show a preview of the first N rows** on the dataset detail page (also noted as a long-standing TODO in `views.py`).
+CLAUDE.md must stay consistent with the codebase. On any PR that touches `datasetapp/`, `openmv/`, `pyproject.toml`, `Makefile`, `.pre-commit-config.yaml`, or `.github/workflows/`, re-read this file before opening the PR and update anything that has drifted — Project shape, How it runs, Gotchas, Tooling, Branch conventions. If you're Claude Code, run this consistency check on every implementation task, not just when explicitly asked.

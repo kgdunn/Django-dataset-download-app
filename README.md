@@ -14,8 +14,12 @@ The site lets visitors:
 ```
 .
 ├── manage.py
-├── Makefile                  # one-shot dev tasks (debug, clean)
-├── requirements.txt
+├── Makefile                  # dev tasks (install, migrate, test, lint, debug, docker-up, ...)
+├── pyproject.toml            # uv-managed dependencies + pytest config
+├── uv.lock                   # committed lockfile
+├── Dockerfile                # multi-stage image for local dev (and future prod)
+├── docker-compose.yml        # web + postgres for local dev parity
+├── .github/workflows/ci.yml  # pre-commit + pytest on push and PR
 ├── openmv/                   # Django project (settings, root URLs, WSGI/ASGI)
 │   ├── settings.py
 │   ├── urls.py
@@ -42,19 +46,21 @@ The site lets visitors:
 ## Requirements
 
 - Python 3.11+
-- PostgreSQL (production) — SQLite is used automatically when `DJANGO_DEBUG=1`.
-- The Python packages listed in `requirements.txt` (Django ≥ 4.0, `psycopg2-binary`, `python-dotenv`, plus dev tools).
+- [uv](https://docs.astral.sh/uv/) for dependency management
+- PostgreSQL (production / docker compose) — SQLite is used automatically when `DJANGO_DEBUG=1`.
+
+Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`.
 
 ## Local development
+
+### Native (uv)
 
 ```bash
 # 1. Clone and enter the repo
 git clone <repo-url> && cd Django-dataset-download-app
 
-# 2. Create a virtualenv and install dependencies
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# 2. Install dependencies into a managed venv
+uv sync --dev
 
 # 3. Configure environment
 cp .env.example .env
@@ -65,7 +71,20 @@ cp .env.example .env
 make debug
 ```
 
-Visit <http://127.0.0.1:8080/>. Create a superuser with `python manage.py createsuperuser` to log into `/admin/` and add Tags / Datasets / DataFiles.
+### Docker compose
+
+```bash
+cp .env.example .env   # set SECRET_KEY and POSTGRES_*; set DJANGO_DEBUG=0
+make docker-up         # builds + starts web (Django) and db (Postgres)
+```
+
+Either path serves <http://127.0.0.1:8080/>. Create a superuser with `uv run python manage.py createsuperuser` (native) or `docker compose exec web python manage.py createsuperuser` (Docker) to log into `/admin/` and add Tags / Datasets / DataFiles.
+
+## Testing & CI
+
+- `make test` — runs the smoke-test suite (`uv run pytest`).
+- `make lint` — runs `pre-commit run --all-files`.
+- `.github/workflows/ci.yml` runs both on every PR and on pushes to `master`.
 
 ## Production notes
 
@@ -76,9 +95,14 @@ Visit <http://127.0.0.1:8080/>. Create a superuser with `python manage.py create
 
 ## Tooling
 
+- `make install` — `uv sync --dev`.
+- `make migrate` — `uv run python manage.py migrate`.
+- `make collectstatic` — `uv run python manage.py collectstatic --no-input`.
+- `make test` — `uv run pytest`.
+- `make lint` — `uv run pre-commit run --all-files`.
 - `make debug` — collectstatic + migrate + createcachetable + runserver on `:8080`.
-- `make clean` — remove `__pycache__`, caches, and reinstall dev dependencies.
-- `pre-commit run --all-files` — black, isort, flake8, mypy, plus a few hygiene checks. The pinned hook versions are old; see `CLAUDE.md` for the upgrade plan.
+- `make docker-up` / `make docker-down` — wrappers over `docker compose`.
+- `make clean` — remove `__pycache__`, caches, etc.
 
 ## License
 

@@ -10,6 +10,7 @@ and https://docs.djangoproject.com/en/stable/ref/settings/ for the full list.
 """
 
 from pathlib import Path
+from typing import Any
 
 from dotenv import dotenv_values
 
@@ -48,7 +49,7 @@ ROOT_URLCONF = "openmv.urls"
 
 # `OPTIONS.debug` is set per-environment in dev.py / prod.py, after this
 # import, so the template debug toolbar tracks the real DEBUG flag.
-TEMPLATES = [
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],

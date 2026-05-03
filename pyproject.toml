@@ -1,6 +1,6 @@
 [project]
 name = "openmv"
-version = "0.1.0"
+version = "1.0.0"
 description = "The Django site behind https://openmv.net — a public catalogue of small, real-world datasets."
 requires-python = ">=3.11"
 dependencies = [

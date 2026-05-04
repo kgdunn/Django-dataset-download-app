@@ -1,4 +1,4 @@
-"""Security-regression tests for v1.4.0 hardening (see docs/SECURITY.md).
+"""Security-regression tests for v1.5.0 hardening (see docs/SECURITY.md).
 
 Each test pins a specific finding so that future refactors can't quietly
 re-open the hole.
@@ -18,6 +18,7 @@ from datasetapp.templatetags.extra_tags import sanitise_markup
 
 
 # ---------------------------------------------------------------- sanitiser --
+
 
 @pytest.mark.parametrize(
     "raw,banned",
@@ -42,8 +43,10 @@ def test_sanitise_markup_strips_dangerous_constructs(raw, banned):
         ("<i>italic</i>", "<i>italic</i>"),
         ("<sub>2</sub>", "<sub>2</sub>"),
         ("<sup>3</sup>", "<sup>3</sup>"),
-        ('<a href="https://example.org/x">link</a>',
-         '<a href="https://example.org/x">link</a>'),
+        (
+            '<a href="https://example.org/x">link</a>',
+            '<a href="https://example.org/x">link</a>',
+        ),
     ],
 )
 def test_sanitise_markup_preserves_allowed_tags(raw, kept):
@@ -66,6 +69,7 @@ def test_sanitise_markup_handles_none_and_empty():
 
 # --------------------------------------------------- detail page rendering --
 
+
 def test_detail_page_does_not_render_admin_supplied_script(client, db):
     ds = Dataset.objects.create(
         name="Iris",
@@ -73,7 +77,7 @@ def test_detail_page_does_not_render_admin_supplied_script(client, db):
         description=(
             '<script>alert("xss-1")</script>'
             '<img src=x onerror=alert("xss-2")>'
-            '<b>safe-bold</b>'
+            "<b>safe-bold</b>"
         ),
         author_name="A",
         usage_restrictions="None",
@@ -82,17 +86,15 @@ def test_detail_page_does_not_render_admin_supplied_script(client, db):
     DataFile.objects.create(
         file_type="CSV", link_to_file="datasets/iris-xss.csv", dataset=ds
     )
-    response = client.get(
-        reverse("datasetapp:dataset-about-a-dataset", args=[ds.slug])
-    )
+    response = client.get(reverse("datasetapp:dataset-about-a-dataset", args=[ds.slug]))
     body = response.content.decode()
     assert response.status_code == 200
     # The page-supplied <script> tags include the ECharts setup block;
     # what matters is that no admin-injected executable construct survives.
     # bleach drops the tag wrappers entirely (strip=True), so the
     # inner text is left as inert text content.
-    description_block = body.split('<dt>Description</dt>')[1].split('</dd>')[0]
-    data_source_block = body.split('<dt>Data source</dt>')[1].split('</dd>')[0]
+    description_block = body.split("<dt>Description</dt>")[1].split("</dd>")[0]
+    data_source_block = body.split("<dt>Data source</dt>")[1].split("</dd>")[0]
     for block in (description_block, data_source_block):
         assert "<script" not in block.lower()
         assert "<iframe" not in block.lower()
@@ -105,23 +107,22 @@ def test_detail_page_does_not_render_admin_supplied_script(client, db):
 
 # ---------------------------------------------------- download_dataset 404 --
 
+
 @pytest.mark.parametrize(
     "bad_name",
     [
-        "noextension",          # no dot
-        "two.dots.csv",         # multiple dots
-        "name.toolongext",      # extension > 3 letters
-        ".csv",                 # empty base
-        "iris.cs",              # extension < 3 letters
-        "iris.CSV",             # uppercase rejected pre-lowercase (still passes regex after .lower())
+        "noextension",  # no dot
+        "two.dots.csv",  # multiple dots
+        "name.toolongext",  # extension > 3 letters
+        ".csv",  # empty base
+        "iris.cs",  # extension < 3 letters
+        "iris.CSV",  # uppercase rejected pre-lowercase (still passes regex after .lower())
     ],
 )
 def test_download_dataset_returns_404_not_500_for_bad_filenames(client, db, bad_name):
-    """Pre-v1.4.0 these raised ValueError on `[a, b] = name.split('.')`,
+    """Pre-v1.5.0 these raised ValueError on `[a, b] = name.split('.')`,
     surfacing as 500s. Now they all 404."""
-    response = client.get(
-        reverse("datasetapp:dataset-download", args=[bad_name])
-    )
+    response = client.get(reverse("datasetapp:dataset-download", args=[bad_name]))
     assert response.status_code == 404
 
 
@@ -139,6 +140,7 @@ def test_download_dataset_no_hit_row_on_bad_filename(client, db):
 
 
 # -------------------------------------------------------- DataFile.clean() --
+
 
 def test_datafile_clean_rejects_extension_mismatch(db):
     ds = Dataset.objects.create(
@@ -177,6 +179,7 @@ def test_datafile_clean_accepts_xlsx_for_xls_filetype(db):
 
 # ---------------------------------------------------- csv preview safety --
 
+
 def test_csv_preview_returns_none_on_unreadable_file(db):
     """The view must swallow errors from a missing/corrupt CSV and return
     None so the template falls back to "no preview" rather than 500-ing."""
@@ -199,6 +202,7 @@ def test_csv_preview_returns_none_on_unreadable_file(db):
 
 # --------------------------------------------- security headers middleware --
 
+
 def test_security_headers_present_on_homepage(client, db):
     response = client.get(reverse("datasetapp:dataset-home-page"))
     assert response.status_code == 200
@@ -210,8 +214,9 @@ def test_security_headers_present_on_homepage(client, db):
 
 # ------------------------------------------- _download_series cache hit --
 
+
 def test_download_series_uses_cache(client, db):
-    """Verify the cache layer added in v1.4.0 — second call avoids the DB."""
+    """Verify the cache layer added in v1.5.0 — second call avoids the DB."""
     from datasetapp.views import _download_series
 
     ds = Dataset.objects.create(
@@ -239,14 +244,13 @@ def test_download_series_uses_cache(client, db):
 
 # ------------------------------------- special_message no longer in context --
 
+
 def test_homepage_no_longer_carries_special_message_context(client, db):
     """Defence: if a future commit re-introduces the variable, the |safe
     template chain is gone, so the worst case is plain-text rendering."""
     from datasetapp import views
 
-    with patch.object(
-        views, "TemplateResponse", wraps=views.TemplateResponse
-    ) as spy:
+    with patch.object(views, "TemplateResponse", wraps=views.TemplateResponse) as spy:
         client.get(reverse("datasetapp:dataset-home-page"))
         # Inspect the context dict passed to TemplateResponse.
         ctx = spy.call_args.args[2]

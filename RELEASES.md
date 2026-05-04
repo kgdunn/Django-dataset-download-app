@@ -1,6 +1,6 @@
 # Releases
 
-## v1.4.0
+## v1.5.0
 
 Security audit and hardening pass. Behaviour-preserving for normal visitors;
 removes a stored-XSS surface, two reliability cliffs in the public download
@@ -71,15 +71,53 @@ path, and adds browser-side defence-in-depth headers. Full audit record in
 
 ### Operational notes
 
-- **Lockfile must be regenerated** before merge: run `uv lock` locally and
-  commit `uv.lock`. CI's `uv sync --frozen` will fail until that lands.
-  (The sandbox where this PR was prepared had no PyPI access.)
 - **SRI hashes are pending**: `make sri` prints the values to insert into
   the two CDN `<script>` tags. Documented as a one-line follow-up edit.
 - **GitHub Actions are still tag-pinned** (`@v4`, `@v6`); SHA-pinning is
-  documented as a follow-up issue, deferred for the same network reason.
+  documented as a follow-up issue (`docs/SECURITY.md` issue J).
 - **HSTS preload** is intentionally not flipped on yet — the staged
   rollout in `prod.py`'s comment still applies.
+
+## v1.4.0
+
+Off-host backups to AWS S3 — closes #49 and replaces the frozen Linode
+`backup-datasets.sh` cron that had been backing up a stale copy since the
+2026-05-03 Hetzner cutover.
+
+### Highlights
+
+- **`bin/backup-openmv.sh`** (#49): a single host-side bash script that
+  runs nightly under `deploy` from cron. On every invocation it:
+  - dumps Postgres via `docker compose exec -T db pg_dump --clean
+    --if-exists`, gzips the result, and uploads it to
+    `s3://$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/db/daily/db_openmv-YYYY-MM-DD.sql.gz`;
+  - promotes the same dump to `db/monthly/db_openmv-YYYY-MM.sql.gz` on the
+    1st of each month and to `db/yearly/db_openmv-YYYY.sql.gz` on Jan 1
+    via a server-side `aws s3 cp` (no second `pg_dump`);
+  - mirrors `data/media/` and `data/public/` to the matching S3 prefixes
+    via `aws s3 sync` *without* `--delete`, so an accidental local rm or a
+    detached bind-mount doesn't propagate to the off-host copy;
+  - prunes `db/daily/` to the 15 most recent objects and `db/monthly/` to
+    the 12 most recent, by S3 `LastModified`. `db/yearly/` is never pruned.
+  Replaces the old `manage.py dumpdata`-based script — `pg_dump` is faster
+  on the ~300k-row `Hit` table and round-trips cleanly across Django
+  versions.
+- **AWS S3, deliberately not Hetzner Object Storage**: the destination
+  sits in a different cloud account from the production VPS so a
+  compromise of one doesn't reach the other.
+- **`data/static/` is intentionally skipped**: `collectstatic` regenerates
+  it on every container start, so it has nothing worth preserving.
+- **`.env.example`**: five new commented-out keys
+  (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`,
+  `BACKUP_S3_BUCKET`, `BACKUP_S3_PREFIX`). The script sources the same
+  `.env` the prod stack uses, so secrets stay in one place.
+- **CLAUDE.md** gains a `## Backups` section (S3 layout, IAM scope, host
+  `awscli` install, cron entry, restore commands) and a new Gotcha (#7)
+  documenting the deliberate `data/static/` skip.
+
+The cron entry itself is **not** auto-installed — it lives outside the
+repo as operational state, documented in CLAUDE.md so the next maintainer
+knows where to put it. No visitor-visible behaviour change.
 
 ## v1.3.0
 

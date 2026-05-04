@@ -86,6 +86,91 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 - **Manual deploy** (rollback, hotfix, debugging): from `/home/deploy/openmv/repo/`, run `git pull && docker compose -f docker-compose.prod.yml up -d --build` directly.
 - **Public IPs**: IPv4 `178.104.167.195`, IPv6 `2a01:4f8:1c19:2380::1`. Behind Cloudflare's anycast for the apex; visible directly only for `test.openmv.net`.
 
+## Backups
+
+Off-host backups go to AWS S3 — deliberately a different cloud provider /
+account from the Hetzner VPS so a compromise of one doesn't reach the other.
+The Hetzner-side script is `bin/backup-openmv.sh`; it runs nightly under
+`deploy` from cron and does three things on every invocation:
+
+1. **Postgres dump** of the running `db` container via
+   `docker compose -f docker-compose.prod.yml exec -T db pg_dump --clean --if-exists`,
+   gzipped, uploaded to
+   `s3://$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/db/daily/db_openmv-YYYY-MM-DD.sql.gz`.
+   The same dump is also copied to `db/monthly/db_openmv-YYYY-MM.sql.gz` on
+   the 1st of each month, and to `db/yearly/db_openmv-YYYY.sql.gz` on Jan 1.
+2. **`aws s3 sync`** of `data/media/` → `…/media/` and `data/public/` →
+   `…/public/`. No `--delete` flag — an accidental local rm or detached bind
+   mount must not propagate to the off-host copy. `data/static/` is
+   intentionally **not** backed up because `collectstatic` regenerates it on
+   every container start.
+3. **Retention pruning** by S3 `LastModified`: `db/daily/` keeps the 15
+   most recent objects, `db/monthly/` keeps 12, `db/yearly/` is never pruned.
+
+S3 layout:
+
+```
+s3://$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/
+├── db/
+│   ├── daily/    db_openmv-2026-05-04.sql.gz   (≤15)
+│   ├── monthly/  db_openmv-2026-05.sql.gz      (≤12)
+│   └── yearly/   db_openmv-2026.sql.gz         (∞)
+├── media/        mirror of data/media/
+└── public/       mirror of data/public/
+```
+
+### Configuration
+
+`bin/backup-openmv.sh` sources the same `.env` the prod stack uses. The
+keys it needs on top of the existing `POSTGRES_*` set:
+
+```
+AWS_ACCESS_KEY_ID=…
+AWS_SECRET_ACCESS_KEY=…
+AWS_DEFAULT_REGION=eu-central-1
+BACKUP_S3_BUCKET=openmv-backups
+BACKUP_S3_PREFIX=openmv
+```
+
+The IAM principal those keys belong to should be scoped to `s3:PutObject`,
+`s3:GetObject`, `s3:DeleteObject`, and `s3:ListBucket` on
+`arn:aws:s3:::$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/*` only — nothing else.
+Enable bucket versioning + SSE-S3 (default since Jan 2023) when creating
+the bucket.
+
+### Host prerequisite
+
+The Hetzner VPS needs the AWS CLI on the host (not in the container — the
+script calls `aws` directly). One-shot: `sudo apt install awscli`.
+
+### Cron entry (run as `deploy`)
+
+```
+35 21 * * *  /home/deploy/openmv/repo/bin/backup-openmv.sh \
+    >> /home/deploy/openmv/backups/backup.log 2>&1
+```
+
+Same time the Linode cron used to run. The script is *not* installed
+automatically by `bin/deploy-impl.sh`; cron lives outside the repo because
+its presence and schedule are operational state, not application state.
+
+### Restore
+
+```bash
+# Database (daily snapshot)
+aws s3 cp s3://$BACKUP_S3_BUCKET/openmv/db/daily/db_openmv-YYYY-MM-DD.sql.gz - \
+  | gunzip \
+  | docker compose -f docker-compose.prod.yml exec -T db \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+
+# Datasets (pull missing files back; --delete deliberately omitted)
+aws s3 sync s3://$BACKUP_S3_BUCKET/openmv/media/ data/media/
+aws s3 sync s3://$BACKUP_S3_BUCKET/openmv/public/ data/public/
+```
+
+`data/static/` is rebuilt automatically by the next container start —
+don't restore it.
+
 ## Gotchas worth knowing before editing
 
 1. **`DatasetManager.get_queryset` filters out `is_hidden=True` rows from the public site _and_ from the admin list.** `Dataset.objects` is the only manager, so the admin's `DatasetAdmin` queryset is filtered too. To re-edit a hidden dataset, flip `is_hidden` directly in the DB (`./manage.py shell` or a `psql` session) — there is no `all_objects` escape hatch.
@@ -95,8 +180,9 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 5. **`download_dataset` validates its `file_name` against `^[a-z0-9-]+\.[a-z]{3}$` before any DB lookup.** Anything outside that shape returns 404, not 500. If you ever need to support a 4-letter extension (`.json`, `.tsv`, …), update both `_DOWNLOAD_FILENAME_RE` *and* the `DataFile.file_type_choice` tuple in the same change.
 6. **Admin-authored markup in `Dataset.description` and `Dataset.data_source` is passed through `bleach` at render time** by the `sanitise_markup` filter. Tags outside the allowlist (script, iframe, style, event handlers, javascript: URLs) are stripped. LaTeX in `\(...\)` survives because bleach treats backslashes and dollar signs as text. If you add a new field that should accept the same markup, route it through the same filter — don't reach for `|safe`.
 7. **The `datasetapp` logger is configured by the `LOGGING` dict in `openmv/settings/base.py`** and writes to stdout via a `StreamHandler`. In the production Docker container that means `docker logs` (and any host log shipper) captures everything; locally it streams to the `runserver` terminal. Override the level for ad-hoc debugging by setting `DATASETAPP_LOG_LEVEL=DEBUG` in `.env` or the process env.
-8. **Migration `0002_drop_hit_pii` is what destroys legacy IP / User-Agent / referrer data** in any database that pre-dates v1.3.0 — the columns are dropped, taking every existing value with them. There is no separate retention job because the schema itself no longer holds PII. If you ever restore a pre-v1.3.0 backup, re-run `manage.py migrate` to re-trim it.
-9. **Security review of the codebase lives in `docs/SECURITY.md`** — that's the canonical record of every audit finding (fixed and deferred), the host-side recommendations (Caddy admin rate-limit, Cloudflare WAF, fail2ban), and the follow-up issues. Update it on any PR that touches a security-relevant surface (templates with markup, view input handling, file uploads, settings, middleware, dependencies, CI permissions).
+8. **`bin/backup-openmv.sh` deliberately skips `data/static/`.** It mirrors `data/media/` (datasets — the irreplaceable bytes) and `data/public/` (the small Apache-era files), but `collectstatic` regenerates `data/static/` on every container start, so backing it up would just be padding. If you ever add a file under `data/static/` that *isn't* `collectstatic` output, fix the source — don't extend the backup script.
+9. **Migration `0002_drop_hit_pii` is what destroys legacy IP / User-Agent / referrer data** in any database that pre-dates v1.3.0 — the columns are dropped, taking every existing value with them. There is no separate retention job because the schema itself no longer holds PII. If you ever restore a pre-v1.3.0 backup, re-run `manage.py migrate` to re-trim it.
+10. **Security review of the codebase lives in `docs/SECURITY.md`** — that's the canonical record of every audit finding (fixed and deferred), the host-side recommendations (Caddy admin rate-limit, Cloudflare WAF, fail2ban), and the follow-up issues. Update it on any PR that touches a security-relevant surface (templates with markup, view input handling, file uploads, settings, middleware, dependencies, CI permissions).
 
 ## Tooling
 
@@ -104,9 +190,9 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
   - Install everything: `uv sync --dev`
   - Add a runtime dep: `uv add <pkg>`; dev dep: `uv add --dev <pkg>`
   - Refresh the lockfile after manual edits: `uv lock`
-  - Audit installed deps for known CVEs: `uv run pip-audit` (added to dev group in v1.4.0; CI runs it non-blocking).
+  - Audit installed deps for known CVEs: `uv run pip-audit` (added to dev group in v1.5.0; CI runs it non-blocking).
   - Django is pinned `>=5.2,<5.3` (bumped from 4.2 LTS in v1.2.0). 5.2 is the current LTS series; the project intentionally tracks LTS releases only.
-  - Runtime deps include `bleach` (v1.4.0+) for HTML sanitisation in the `sanitise_markup` template filter.
+  - Runtime deps include `bleach` (v1.5.0+) for HTML sanitisation in the `sanitise_markup` template filter.
 - **Tests** run with `uv run pytest` (or `make test`). `pytest-django` is wired through `[tool.pytest.ini_options]` in `pyproject.toml`. Smoke suite lives in `datasetapp/tests/test_views.py`.
 - **GitHub Actions** runs `pre-commit run --all-files` and `pytest` on every PR and on push to `master` (`.github/workflows/ci.yml`). The pytest step boots a `postgres:16-alpine` service container, sets `DJANGO_SETTINGS_MODULE=openmv.settings.ci`, and injects `SECRET_KEY` + `POSTGRES_*` + `SQL_*` env vars directly via the workflow `env:` block — no `.env` file is created. Tests therefore run against the same database engine as production, catching Postgres-only behaviour that SQLite would silently paper over.
 - **Docker compose**: `docker-compose.yml` is for **local development** (volume-mounts the source for hot reload, runs `runserver` against SQLite via `openmv.settings.dev`). `docker-compose.prod.yml` is the **production** compose used on Hetzner (bind-mounts `.env` and `data/` dirs, sets `DJANGO_SETTINGS_MODULE=openmv.settings.prod`, runs `migrate` + `collectstatic` + `gunicorn`, binds to loopback on offset ports `8001`/`5434`). Both use the same `Dockerfile`.

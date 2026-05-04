@@ -26,19 +26,19 @@ generic CVSS score.
 
 | # | Severity | File:line                                                | Issue                                                                                                                                                                                            | Status                  |
 |---|----------|----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|
-| 1 | Critical | `datasetapp/templates/datasetapp/dataset_info.html:4,13,14` | Stored XSS via `\|safe` on admin-authored `name` / `description` / `data_source`. Compromised admin or future co-maintainer can inject `<script>` that fires for every visitor.                  | **Fixed in v1.4.0** — `\|sanitise_markup` (bleach allowlist) for the two text fields; auto-escape for the title. |
-| 2 | High     | `datasetapp/templates/datasetapp/all_datasets.html:15`   | Contradictory `\|safe\|escape` filter chain on `special_message`. Not exploitable today (hardcoded view string) but invites future misuse.                                                       | **Fixed in v1.4.0** — markup inlined in template, context variable removed from `display_all`. |
-| 3 | High     | `datasetapp/views.py:179-180`                            | `[base, ext] = file_name.split(".")` raises `ValueError → 500` on any input without exactly one dot (`/file/foo`, `/file/foo.bar.csv`). Easy log-flood / cheap DoS.                              | **Fixed in v1.4.0** — strict regex pre-check, `rsplit(".", 1)`. |
-| 4 | High     | `datasetapp/views.py:67-89` (`_csv_preview`)             | `csv.Sniffer().sniff(...)` reachable from any visitor on `/info/<slug>` and prone to catastrophic backtracking on adversarial CSVs uploaded by admin.                                            | **Fixed in v1.4.0** — Sniffer removed, `csv.excel` dialect used unconditionally. |
-| 5 | Medium   | `datasetapp/models.py:114-115` (`DataFile.link_to_file`) | No extension or MIME validation on uploads. Admin can upload `.html` masquerading as `.csv`, served by Caddy with the wrong type.                                                                | **Fixed in v1.4.0** — `FileExtensionValidator` + `DataFile.clean()` enforces declared `file_type` matches actual extension. |
-| 6 | Medium   | `openmv/settings/prod.py`                                | Missing explicit `SESSION_COOKIE_HTTPONLY` / `SESSION_COOKIE_SAMESITE` / `CSRF_COOKIE_HTTPONLY` / `CSRF_COOKIE_SAMESITE` and no `Content-Security-Policy` / `Permissions-Policy` headers.       | **Fixed in v1.4.0** — four cookie flags set explicitly; `openmv.middleware.SecurityHeadersMiddleware` emits CSP, Permissions-Policy, COOP. |
-| 7 | Medium   | `openmv/settings/base.py`                                | No `DATA_UPLOAD_MAX_MEMORY_SIZE` / `FILE_UPLOAD_MAX_MEMORY_SIZE` / `FILE_UPLOAD_PERMISSIONS` overrides — relies on Django defaults.                                                              | **Fixed in v1.4.0** — capped at 5 MiB; uploads written `0o644`. |
-| 8 | Medium   | `datasetapp/admin.py:7,19,28`                            | `list_per_page = 2000` on all three admins; `Hit` table is editable in admin even though it's a write-once audit log.                                                                            | **Fixed in v1.4.0** — `list_per_page = 100`; `HitAdmin` rows readonly; `date_hierarchy` + `list_filter` for scoped queries. |
-| 9 | Medium   | `datasetapp/views.py:92-109` (`_download_series`)        | 365-day per-dataset aggregation recomputed on every detail-page view. Cheap today; future-DoS as `Hit` grows.                                                                                    | **Fixed in v1.4.0** — cached for 1 h via `django.core.cache`. See Issue F for the structural follow-up. |
-| 10 | Low     | `datasetapp/templates/datasetapp/base.html:21`, `dataset_info.html:154` | MathJax + ECharts loaded from CDN with floating `mathjax@2` / `echarts@5` tags and no SRI. CDN compromise = stored XSS.                                                                          | **Partially fixed in v1.4.0** — pinned to `mathjax@2.7.9` / `echarts@5.5.1` and `crossorigin="anonymous"` set; SRI hashes pending (run `make sri` then edit). |
-| 11 | Low     | `.github/workflows/ci.yml`                               | No `permissions:` block; `actions/checkout@v4` and `astral-sh/setup-uv@v6` referenced by floating tag. (`deploy.yml` is already fine.)                                                           | **Partially fixed in v1.4.0** — `permissions: contents: read` added; `pip-audit` step added. SHA-pinning of the two third-party actions deferred (see Issue J). |
-| 12 | Low     | `Dockerfile:6`                                           | `COPY --from=ghcr.io/astral-sh/uv:latest` — floating tag.                                                                                                                                        | **Fixed in v1.4.0** — pinned to `ghcr.io/astral-sh/uv:0.8.17`. |
-| 13 | Info    | `pyproject.toml`                                         | `psycopg2-binary`, `python-dotenv`, `gunicorn` had no lower bounds; `pip-audit` not in dev group.                                                                                                | **Fixed in v1.4.0** — lower bounds added; `pip-audit` in dev group + non-blocking CI step. |
+| 1 | Critical | `datasetapp/templates/datasetapp/dataset_info.html:4,13,14` | Stored XSS via `\|safe` on admin-authored `name` / `description` / `data_source`. Compromised admin or future co-maintainer can inject `<script>` that fires for every visitor.                  | **Fixed in v1.5.0** — `\|sanitise_markup` (bleach allowlist) for the two text fields; auto-escape for the title. |
+| 2 | High     | `datasetapp/templates/datasetapp/all_datasets.html:15`   | Contradictory `\|safe\|escape` filter chain on `special_message`. Not exploitable today (hardcoded view string) but invites future misuse.                                                       | **Fixed in v1.5.0** — markup inlined in template, context variable removed from `display_all`. |
+| 3 | High     | `datasetapp/views.py:179-180`                            | `[base, ext] = file_name.split(".")` raises `ValueError → 500` on any input without exactly one dot (`/file/foo`, `/file/foo.bar.csv`). Easy log-flood / cheap DoS.                              | **Fixed in v1.5.0** — strict regex pre-check, `rsplit(".", 1)`. |
+| 4 | High     | `datasetapp/views.py:67-89` (`_csv_preview`)             | `csv.Sniffer().sniff(...)` reachable from any visitor on `/info/<slug>` and prone to catastrophic backtracking on adversarial CSVs uploaded by admin.                                            | **Fixed in v1.5.0** — Sniffer removed, `csv.excel` dialect used unconditionally. |
+| 5 | Medium   | `datasetapp/models.py:114-115` (`DataFile.link_to_file`) | No extension or MIME validation on uploads. Admin can upload `.html` masquerading as `.csv`, served by Caddy with the wrong type.                                                                | **Fixed in v1.5.0** — `FileExtensionValidator` + `DataFile.clean()` enforces declared `file_type` matches actual extension. |
+| 6 | Medium   | `openmv/settings/prod.py`                                | Missing explicit `SESSION_COOKIE_HTTPONLY` / `SESSION_COOKIE_SAMESITE` / `CSRF_COOKIE_HTTPONLY` / `CSRF_COOKIE_SAMESITE` and no `Content-Security-Policy` / `Permissions-Policy` headers.       | **Fixed in v1.5.0** — four cookie flags set explicitly; `openmv.middleware.SecurityHeadersMiddleware` emits CSP, Permissions-Policy, COOP. |
+| 7 | Medium   | `openmv/settings/base.py`                                | No `DATA_UPLOAD_MAX_MEMORY_SIZE` / `FILE_UPLOAD_MAX_MEMORY_SIZE` / `FILE_UPLOAD_PERMISSIONS` overrides — relies on Django defaults.                                                              | **Fixed in v1.5.0** — capped at 5 MiB; uploads written `0o644`. |
+| 8 | Medium   | `datasetapp/admin.py:7,19,28`                            | `list_per_page = 2000` on all three admins; `Hit` table is editable in admin even though it's a write-once audit log.                                                                            | **Fixed in v1.5.0** — `list_per_page = 100`; `HitAdmin` rows readonly; `date_hierarchy` + `list_filter` for scoped queries. |
+| 9 | Medium   | `datasetapp/views.py:92-109` (`_download_series`)        | 365-day per-dataset aggregation recomputed on every detail-page view. Cheap today; future-DoS as `Hit` grows.                                                                                    | **Fixed in v1.5.0** — cached for 1 h via `django.core.cache`. See Issue F for the structural follow-up. |
+| 10 | Low     | `datasetapp/templates/datasetapp/base.html:21`, `dataset_info.html:154` | MathJax + ECharts loaded from CDN with floating `mathjax@2` / `echarts@5` tags and no SRI. CDN compromise = stored XSS.                                                                          | **Partially fixed in v1.5.0** — pinned to `mathjax@2.7.9` / `echarts@5.5.1` and `crossorigin="anonymous"` set; SRI hashes pending (run `make sri` then edit). |
+| 11 | Low     | `.github/workflows/ci.yml`                               | No `permissions:` block; `actions/checkout@v4` and `astral-sh/setup-uv@v6` referenced by floating tag. (`deploy.yml` is already fine.)                                                           | **Partially fixed in v1.5.0** — `permissions: contents: read` added; `pip-audit` step added. SHA-pinning of the two third-party actions deferred (see Issue J). |
+| 12 | Low     | `Dockerfile:6`                                           | `COPY --from=ghcr.io/astral-sh/uv:latest` — floating tag.                                                                                                                                        | **Fixed in v1.5.0** — pinned to `ghcr.io/astral-sh/uv:0.8.17`. |
+| 13 | Info    | `pyproject.toml`                                         | `psycopg2-binary`, `python-dotenv`, `gunicorn` had no lower bounds; `pip-audit` not in dev group.                                                                                                | **Fixed in v1.5.0** — lower bounds added; `pip-audit` in dev group + non-blocking CI step. |
 
 ### Already-correct findings (no change needed)
 
@@ -133,7 +133,7 @@ PATCH release. Then submit `openmv.net` to <https://hstspreload.org/>.
 
 ## Issues to file
 
-The plan that produced v1.4.0 deferred these items. They should each
+The plan that produced v1.5.0 deferred these items. They should each
 become a GitHub issue on `kgdunn/Django-dataset-download-app`.
 Cross-reference them from this document so the audit trail stays
 attached to the audit, not to a transient PR description.
@@ -165,7 +165,7 @@ attached to the audit, not to a transient PR description.
 
 ### Issue F — Pre-aggregate `Hit` rows into a daily-counts table
 - **Severity:** Info (future-DoS).
-- **Why:** `_download_series` walks every `Hit` row in the last 365 days. The 1 h cache added in v1.4.0 papers over it, but the cache miss still has to scan everything; once `Hit` is millions of rows that's a multi-second query.
+- **Why:** `_download_series` walks every `Hit` row in the last 365 days. The 1 h cache added in v1.5.0 papers over it, but the cache miss still has to scan everything; once `Hit` is millions of rows that's a multi-second query.
 - **Proposed fix:** New `HitDaily(date, dataset, count)` table updated by a nightly management command (or by a post-save signal that does an upsert on `(date, dataset)`). Read from that table in `_download_series`. Keep the raw `Hit` table for fine-grained queries.
 
 ### Issue G — Replace the `description` / `data_source` admin widget with a markup-aware editor
@@ -175,7 +175,7 @@ attached to the audit, not to a transient PR description.
 
 ### Issue H — Pin Docker base images by digest
 - **Severity:** Low (supply chain).
-- **Why:** `python:3.11-slim` and `postgres:16-alpine` are pinned only by minor version. v1.4.0 pinned the `uv` image, but the two main bases remain floating.
+- **Why:** `python:3.11-slim` and `postgres:16-alpine` are pinned only by minor version. v1.5.0 pinned the `uv` image, but the two main bases remain floating.
 - **Proposed fix:** Pin both to `…@sha256:…` digests in `Dockerfile` and `docker-compose.prod.yml`. Add a Renovate / Dependabot config to bump them on a schedule.
 
 ### Issue I — Add a Dockerfile `HEALTHCHECK`
@@ -185,18 +185,18 @@ attached to the audit, not to a transient PR description.
 
 ### Issue J — Pin GitHub Actions to full commit SHAs
 - **Severity:** Low (supply chain).
-- **Why:** v1.4.0 added `permissions: contents: read` and a `pip-audit` step but `actions/checkout@v4` and `astral-sh/setup-uv@v6` are still floating tags that the action owner can re-point. Full SHAs are immutable.
+- **Why:** v1.5.0 added `permissions: contents: read` and a `pip-audit` step but `actions/checkout@v4` and `astral-sh/setup-uv@v6` are still floating tags that the action owner can re-point. Full SHAs are immutable.
 - **Proposed fix:** Look up the latest releases of both actions, pin to their commit SHAs with a `# vX.Y.Z` comment, and add a `.github/dependabot.yml` for `package-ecosystem: github-actions` so Dependabot bumps the SHAs automatically.
 
 ### Issue K — Generate and inline SRI hashes for the two CDN `<script>` tags
 - **Severity:** Low.
-- **Why:** v1.4.0 pinned MathJax and ECharts to specific versions but couldn't generate SRI hashes from the sandbox (no network). The version pin alone removes the floating-tag risk; SRI is the additional defence against a CDN compromise serving altered bytes for the same URL.
-- **Proposed fix:** Run `make sri` (added in v1.4.0) and paste the two `integrity="sha384-…"` values into the `<script>` tags in `dataset_info.html:154-160` and `base.html:21-27`. One PATCH-bump release.
+- **Why:** v1.5.0 pinned MathJax and ECharts to specific versions but couldn't generate SRI hashes from the sandbox (no network). The version pin alone removes the floating-tag risk; SRI is the additional defence against a CDN compromise serving altered bytes for the same URL.
+- **Proposed fix:** Run `make sri` (added in v1.5.0) and paste the two `integrity="sha384-…"` values into the `<script>` tags in `dataset_info.html:154-160` and `base.html:21-27`. One PATCH-bump release.
 
 ### Explicitly accepted (not filed)
 
 - `data/` and `media/` are bind-mounted into the container as RW. Read-only is impractical because the app writes uploads. Risk accepted; container UID 1000 ≠ host root limits the blast radius.
-- The `special_message` `|safe|escape` template gotcha (CLAUDE.md) is removed entirely by v1.4.0 — the template inlines the literal markup. No follow-up needed.
+- The `special_message` `|safe|escape` template gotcha (CLAUDE.md) is removed entirely by v1.5.0 — the template inlines the literal markup. No follow-up needed.
 
 ---
 

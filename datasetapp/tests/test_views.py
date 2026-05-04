@@ -28,8 +28,17 @@ def dataset(db):
     )
 
 
+CSV_FIXTURE_BYTES = b"sepal,petal\n5.1,1.4\n4.9,1.4\n"
+
+
 @pytest.fixture
-def csv_file(db, dataset):
+def csv_file(db, dataset, settings, tmp_path):
+    # download_dataset now streams the file via FileResponse, so the bytes
+    # must actually exist on disk under MEDIA_ROOT.
+    settings.MEDIA_ROOT = tmp_path
+    datasets_dir = tmp_path / "datasets"
+    datasets_dir.mkdir()
+    (datasets_dir / "iris.csv").write_bytes(CSV_FIXTURE_BYTES)
     return DataFile.objects.create(
         file_type="CSV",
         link_to_file="datasets/iris.csv",
@@ -69,11 +78,22 @@ def test_tag_view_returns_200(client, dataset, tag):
     assert response.status_code == 200
 
 
-def test_download_known_file_returns_302_and_increments_hits(client, dataset, csv_file):
+def test_download_known_file_streams_bytes_and_increments_hits(
+    client, dataset, csv_file
+):
     before = Hit.objects.count()
     response = client.get(reverse("datasetapp:dataset-download", args=["iris.csv"]))
-    assert response.status_code == 302
+    assert response.status_code == 200
     assert Hit.objects.count() == before + 1
+    assert response["Content-Disposition"] == 'attachment; filename="iris.csv"'
+    assert b"".join(response.streaming_content) == CSV_FIXTURE_BYTES
+
+
+def test_download_malformed_filename_returns_404_without_hit(client, dataset, csv_file):
+    before = Hit.objects.count()
+    response = client.get(reverse("datasetapp:dataset-download", args=["NOT-A-SLUG"]))
+    assert response.status_code == 404
+    assert Hit.objects.count() == before
 
 
 def test_about_includes_prev_next_when_neighbours_exist(client, db):

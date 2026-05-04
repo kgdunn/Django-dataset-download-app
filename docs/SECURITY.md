@@ -93,6 +93,21 @@ In the Cloudflare dashboard for `openmv.net`:
 `test.openmv.net` is DNS-only (grey cloud) so these rules don't apply
 there — Caddy is the only filter for staging.
 
+#### Bot Fight Mode and dataset downloads
+
+Bot Fight Mode flags non-browser User-Agents (`Python-urllib/3.X`,
+`python-requests/...`, etc.) and can return 403 to legitimate Python
+clients hitting dataset URLs (issue #86). Until v1.6.4 the public
+download path also redirected through `/media/datasets/...`, so a
+single `pandas.read_csv("https://openmv.net/file/<slug>.csv")` was
+evaluated by Cloudflare twice on two different paths. Since v1.6.4
+the `/file/*` view streams the bytes directly via `FileResponse`, so
+only `/file/*` is in the path of legitimate Python downloads. If Bot
+Fight Mode starts blocking that surface too, add a Custom Rule with
+**Field**: `URI Path`, **Operator**: `starts with`, **Value**:
+`/file/`, **Action**: `Skip` → "All remaining custom rules" + "Bot
+Fight Mode".
+
 ### fail2ban jail (alternative to caddy-ratelimit)
 
 `/etc/fail2ban/filter.d/caddy-admin.conf`:

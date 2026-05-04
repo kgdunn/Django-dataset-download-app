@@ -20,7 +20,7 @@ import re
 from django.core.cache import cache
 from django.db.models import Count
 from django.db.models.functions import TruncDate
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import FileResponse, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import reverse as django_reverse
 from django.utils import timezone
@@ -199,8 +199,10 @@ def download_dataset(request, file_name=None):
     the hit counter.
 
     We arrive by: http://localhost/file/cheddar-cheese.csv
-    We redirect the user to http://localhost/media/datasets/cheddar-cheese.csv
-    In production Caddy serves /media/ before the request reaches Django.
+    Django streams the file body directly via ``FileResponse``. The earlier
+    implementation returned a 302 to ``/media/datasets/cheddar-cheese.csv``,
+    which doubled the surface exposed to Cloudflare's Bot Fight Mode and
+    caused 403s for ``urllib`` / ``pandas.read_csv`` clients (issue #86).
     """
     # django-name='dataset-download'
     file_name = (file_name or "").lower()
@@ -243,8 +245,11 @@ def download_dataset(request, file_name=None):
         log_file.error("Failed to create Hit object: {0}".format(e))
 
     log_file.info("Successfully downloaded file: %s" % file_name)
-    log_file.info("Redirected to: %s" % file_obj.link_to_file.url)
 
-    # response = HttpResponse(mimetype='application/' + extension.lower())
-    # response['Content-Disposition'] = 'attachment; filename=%s' % file_name
-    return HttpResponseRedirect(file_obj.link_to_file.url)
+    # FileResponse takes ownership of the file handle and closes it when the
+    # response finishes streaming, so no `with` block is needed.
+    return FileResponse(
+        file_obj.link_to_file.open("rb"),
+        as_attachment=True,
+        filename=file_name,
+    )

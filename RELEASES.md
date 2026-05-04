@@ -1,5 +1,45 @@
 # Releases
 
+## v1.6.4
+
+Bugfix for issue #86 — `pandas.read_csv("https://openmv.net/file/<slug>.csv")`
+and any other `urllib`-based client returned `HTTPError: HTTP Error 403:
+Forbidden`. The cause was the public download flow doing a 302 from `/file/*`
+to `/media/datasets/...`: every download was evaluated by Cloudflare's Bot
+Fight Mode twice, on two different paths, and the redirect target on
+`/media/*` was the one getting blocked for non-browser User-Agents. The
+public download view now streams the file body directly instead of
+redirecting, so there is only one Cloudflare-visible round-trip and the
+`/media/*` surface is no longer exposed to legitimate Python clients at all.
+
+- **`datasetapp/views.py`**: `download_dataset` now returns
+  `FileResponse(file_obj.link_to_file.open("rb"), as_attachment=True,
+  filename=file_name)` instead of `HttpResponseRedirect(...)`. All upstream
+  validation (`_DOWNLOAD_FILENAME_RE`, slug + file-type lookup, `Hit`
+  increment, 404 paths) is unchanged. `FileResponse` from `django.http`
+  added to the imports; `HttpResponseRedirect` is kept for the
+  unknown-slug branch in `about_dataset`. Browsers see
+  `Content-Disposition: attachment; filename="<slug>.<ext>"`; Django
+  infers `Content-Type` from the filename suffix via the stdlib
+  `mimetypes` module, so CSV / XLS / XLSX / XML / MAT all map correctly.
+- **`datasetapp/tests/test_views.py`**: `csv_file` fixture now writes the
+  CSV to a real `tmp_path/datasets/iris.csv` and overrides
+  `settings.MEDIA_ROOT` so `FileResponse` has bytes to stream. Existing
+  download test renamed to
+  `test_download_known_file_streams_bytes_and_increments_hits` and now
+  asserts `200`, the `Content-Disposition` header, and the response body
+  bytes (in addition to the `Hit` count). New
+  `test_download_malformed_filename_returns_404_without_hit` locks the
+  pre-DB-lookup regex check so a hostile `/file/NOT-A-SLUG` still returns
+  404 and does not record a hit.
+- **`docs/SECURITY.md`**: new "Bot Fight Mode and dataset downloads"
+  subsection under the Cloudflare guidance, recording why the redirect
+  was the problem and pre-staging the WAF "Skip" rule for `/file/*` if
+  Bot Fight Mode ever starts blocking that path too.
+- **`CLAUDE.md`**: Views section + Gotcha #2 updated to describe the
+  streaming flow and the test-fixture requirement (real bytes under
+  `MEDIA_ROOT`).
+
 ## v1.6.3
 
 Bugfix for v1.5.0's bleach allowlist: `<img>` was not on the list, so any

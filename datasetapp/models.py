@@ -3,6 +3,10 @@
     :license: BSD, see LICENSE file for details.
 """
 
+from pathlib import Path
+
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
 
@@ -112,8 +116,43 @@ class DataFile(models.Model):
     )
 
     file_type = models.CharField(choices=file_type_choice, max_length=50)
-    link_to_file = models.FileField(upload_to="datasets/", max_length=500)
+    link_to_file = models.FileField(
+        upload_to="datasets/",
+        max_length=500,
+        # Reject anything that isn't one of the four data formats we serve.
+        # Stops an admin (or a phished admin session) from uploading e.g. an
+        # `.html` file that Caddy would happily serve as text/html.
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv", "xls", "xlsx", "xml", "mat"]
+            )
+        ],
+    )
     dataset = models.ForeignKey(Dataset, on_delete=models.PROTECT)
+
+    def clean(self):
+        """Reject mismatches between the declared ``file_type`` and the
+        actual file extension. ``download_dataset`` resolves URLs by
+        ``(slug, file_type.upper())``; if the two disagree, a `.csv`
+        request can silently serve `.xls` bytes and vice versa.
+        """
+        super().clean()
+        if not self.link_to_file or not self.file_type:
+            return
+        actual_ext = Path(self.link_to_file.name).suffix.lower().lstrip(".")
+        # Treat .xlsx as a valid extension for the XLS file_type.
+        valid_ext = {"xls": {"xls", "xlsx"}}.get(
+            self.file_type.lower(), {self.file_type.lower()}
+        )
+        if actual_ext not in valid_ext:
+            raise ValidationError(
+                {
+                    "link_to_file": (
+                        f"File extension '.{actual_ext}' does not match "
+                        f"the declared file type '{self.file_type}'."
+                    )
+                }
+            )
 
     def __str__(self):
         return f"{self.file_type}  :  {self.link_to_file}"

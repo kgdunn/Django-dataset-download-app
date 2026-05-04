@@ -4,6 +4,9 @@ from . import views
 
 app_name = "datasetapp"
 urlpatterns = [
+    # Liveness probe for Docker HEALTHCHECK. Kept outside /admin/ so
+    # Caddy/Cloudflare rate-limits don't apply to it.
+    path("healthz", views.healthz, name="healthz"),
     # Home page
     path("", views.display_all, name="dataset-home-page"),
     # Get all details for a dataset

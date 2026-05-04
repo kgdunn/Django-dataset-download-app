@@ -20,7 +20,7 @@ RUN uv sync --frozen --no-install-project --no-dev
 FROM python:3.11-slim AS runtime
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq5 \
+    && apt-get install -y --no-install-recommends libpq5 curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 app
 
@@ -42,5 +42,12 @@ ENV PATH="/app/.venv/bin:$PATH" \
 USER app
 
 EXPOSE 8000
+
+# Liveness probe: hits the @never_cache /healthz view in datasetapp/urls.py.
+# `-f` so a 5xx still fails the check (curl exits non-zero on HTTP errors only
+# when -f is set). 30s × 3 retries ⇒ container flips to (unhealthy) within
+# ~90s of gunicorn going dark.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8000/healthz || exit 1
 
 CMD ["gunicorn", "openmv.wsgi:application", "--bind", "0.0.0.0:8000"]

@@ -233,6 +233,18 @@ matching `RELEASES.md` section land on `master`. The workflow refuses to run
 if the `## v<version>` heading is missing — that's the safety net. **Do not**
 create tags manually.
 
+## After opening a PR
+
+Once a PR is posted, watch it. If `master` advances and the PR develops merge
+conflicts, resolve them on the PR branch and push the merge commit — don't
+leave the PR sitting in a conflicted state waiting for the human reviewer to
+rebase. When the conflict is in `pyproject.toml` / `RELEASES.md` because
+another PR landed a version bump, renumber your section to the next
+appropriate level on top of the new `master` version (re-apply the PATCH /
+MINOR / MAJOR heuristic above against the new base) and update any
+`docs/SECURITY.md` "Fixed in vX.Y.Z" cross-references to match. Re-run
+`pytest` and `pre-commit` after the merge before pushing.
+
 ## Outstanding work
 
 The GitHub issue tracker is the single source of truth for outstanding work: <https://github.com/kgdunn/Django-dataset-download-app/issues>. Don't duplicate the list here — it goes stale.

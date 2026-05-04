@@ -137,6 +137,29 @@ def test_about_omits_preview_when_only_non_csv_files(client, db):
     assert "dataset-preview" not in response.content.decode()
 
 
+def test_healthz_returns_200_plain_ok(client, db):
+    response = client.get(reverse("datasetapp:healthz"))
+    assert response.status_code == 200
+    assert response.content == b"ok\n"
+    assert response.headers["Content-Type"].startswith("text/plain")
+
+
+def test_healthz_disables_caching(client, db):
+    # @never_cache must be applied so Caddy/Cloudflare can't serve a stale
+    # "ok" past the point of failure.
+    response = client.get(reverse("datasetapp:healthz"))
+    cache_control = response.headers.get("Cache-Control", "")
+    assert "no-cache" in cache_control
+    assert "no-store" in cache_control
+    assert "max-age=0" in cache_control
+
+
+def test_healthz_does_not_record_a_hit(client, db):
+    before = Hit.objects.count()
+    client.get(reverse("datasetapp:healthz"))
+    assert Hit.objects.count() == before
+
+
 def test_about_includes_download_series_for_sparkline(client, dataset, csv_file):
     Hit.objects.create(dataset_hit=csv_file)
     response = client.get(

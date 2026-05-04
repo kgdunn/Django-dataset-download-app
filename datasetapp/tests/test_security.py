@@ -47,10 +47,31 @@ def test_sanitise_markup_strips_dangerous_constructs(raw, banned):
             '<a href="https://example.org/x">link</a>',
             '<a href="https://example.org/x">link</a>',
         ),
+        (
+            '<img src="/media/datasets/foo.png" alt="caption">',
+            'src="/media/datasets/foo.png"',
+        ),
     ],
 )
 def test_sanitise_markup_preserves_allowed_tags(raw, kept):
     assert kept in sanitise_markup(raw)
+
+
+def test_sanitise_markup_strips_event_handlers_from_img():
+    """`<img>` is on the allowlist (so admins can embed dataset figures),
+    but its event-handler attributes are not — `onerror` / `onload` must be
+    dropped, and `javascript:` `src` values must be rejected by the protocol
+    allowlist."""
+    cleaned = sanitise_markup(
+        '<img src="/media/x.png" onerror="alert(1)" onload="alert(2)">'
+    )
+    assert "<img" in cleaned
+    assert 'src="/media/x.png"' in cleaned
+    assert "onerror" not in cleaned
+    assert "onload" not in cleaned
+
+    cleaned_js = sanitise_markup('<img src="javascript:alert(1)">')
+    assert "javascript:" not in cleaned_js
 
 
 def test_sanitise_markup_keeps_latex_intact():
@@ -91,15 +112,17 @@ def test_detail_page_does_not_render_admin_supplied_script(client, db):
     assert response.status_code == 200
     # The page-supplied <script> tags include the ECharts setup block;
     # what matters is that no admin-injected executable construct survives.
-    # bleach drops the tag wrappers entirely (strip=True), so the
-    # inner text is left as inert text content.
+    # bleach drops disallowed tag wrappers entirely (strip=True) and strips
+    # disallowed attributes from allowed tags. <img> is on the allowlist
+    # (v1.6.3) so its wrapper survives, but its event-handler attributes
+    # (onerror, onload) must not.
     description_block = body.split("<dt>Description</dt>")[1].split("</dd>")[0]
     data_source_block = body.split("<dt>Data source</dt>")[1].split("</dd>")[0]
     for block in (description_block, data_source_block):
         assert "<script" not in block.lower()
         assert "<iframe" not in block.lower()
-        assert "<img" not in block.lower()
         assert "onerror" not in block.lower()
+        assert "onload" not in block.lower()
         assert "javascript:" not in block.lower()
     # The allowed <b> tag must survive intact.
     assert "<b>safe-bold</b>" in description_block

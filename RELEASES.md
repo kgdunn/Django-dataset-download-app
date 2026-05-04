@@ -1,5 +1,28 @@
 # Releases
 
+## v1.5.2
+
+Operational follow-up to v1.5.0's audit. Adds a Docker liveness probe so a
+half-broken container (gunicorn workers blocked on a slow query, OOM-killed,
+etc.) flips to `(unhealthy)` and `restart: unless-stopped` can recycle it.
+Closes Issue I in `docs/SECURITY.md`.
+
+- **`datasetapp/views.py`**: new `healthz(request)` view, decorated with
+  `@never_cache`, returning `HttpResponse("ok\n", content_type="text/plain")`.
+  No DB, no template, no auth — pure liveness signal.
+- **`datasetapp/urls.py`**: wired at `/healthz` (reverse name
+  `datasetapp:healthz`). Mounted at the top of the patterns; outside `/admin/`
+  so any future Caddy or Cloudflare admin rate-limit doesn't touch it.
+- **`Dockerfile`**: runtime stage installs `curl` (alongside `libpq5`) and
+  adds `HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3
+  CMD curl -fsS http://127.0.0.1:8000/healthz`. The `-f` flag is required so
+  a 5xx still fails the check.
+- **`datasetapp/tests/test_views.py`**: three smoke tests pin the contract —
+  200 + `ok\n` + `text/plain`, `Cache-Control: no-cache, no-store, max-age=0`
+  (proves `@never_cache` is applied), and no `Hit` row written (proves the
+  view doesn't accidentally exercise the download codepath).
+- **`docs/SECURITY.md`**: Issue I marked **Fixed in v1.5.2**.
+
 ## v1.5.1
 
 Documentation-only follow-up to v1.4.0's S3 backup work. No code changes.

@@ -24,6 +24,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import reverse as django_reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 # Model imports
 from .models import DataFile, Dataset, Hit, Tag
@@ -36,6 +37,15 @@ log_file = logging.getLogger("datasetapp")
 # ValueError on a missing/extra dot, which surfaced as a 500 and noise in the
 # logs.
 _DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3}$")
+
+
+@never_cache
+def healthz(request):
+    # Liveness probe for Docker HEALTHCHECK and any upstream
+    # depends_on: condition: service_healthy. Must not touch the DB,
+    # render a template, or be cacheable — Caddy/Cloudflare caching a
+    # stale "ok" past a failure would defeat the check.
+    return HttpResponse("ok\n", content_type="text/plain")
 
 
 def display_by_tag(request, tag):

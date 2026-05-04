@@ -152,12 +152,14 @@ df.describe()</code></pre>
 
 <!--
   Pinned to a specific patch version so jsDelivr cannot silently serve a
-  different build than the one we tested with. Add an `integrity="sha384-…"`
-  attribute (run `make sri` to compute) once the maintainer has network
-  access to the CDN; the version pin alone already removes the
-  `mathjax@2` floating-tag risk.
+  different build than the one we tested with. The `integrity="sha384-…"`
+  hash below is computed by `make sri` over the bytes of `MathJax.js`
+  itself (jsDelivr ignores the `?config=` query string for static files,
+  so the response body matches what `make sri` hashed); if the CDN ever
+  serves different bytes the browser will refuse to execute the script.
 -->
 <script type="text/javascript" crossorigin="anonymous"
+    integrity="sha384-vi9R4hb1goLJPJDHY+dOmXxcY3HGv6tJIwHxy5JunOTxJGHbsSuubPgl++SNxYYi"
     src="https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
 <nav class="detail-nav">

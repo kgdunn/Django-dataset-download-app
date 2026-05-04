@@ -20,12 +20,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
 <!--
   Pinned to a specific patch version so jsDelivr cannot silently serve a
-  different build than the one we tested with. Add an `integrity="sha384-…"`
-  attribute (run `make sri` to compute) once the maintainer has network
-  access to the CDN; the version pin alone already removes the `echarts@5`
-  floating-tag risk.
+  different build than the one we tested with. The `integrity="sha384-…"`
+  hash below is computed by `make sri`; if the CDN ever serves different
+  bytes the browser will refuse to execute the script.
 -->
 <script crossorigin="anonymous"
+    integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"
     src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 
 <style>

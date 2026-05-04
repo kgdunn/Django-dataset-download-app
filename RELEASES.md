@@ -1,5 +1,86 @@
 # Releases
 
+## v1.4.0
+
+Security audit and hardening pass. Behaviour-preserving for normal visitors;
+removes a stored-XSS surface, two reliability cliffs in the public download
+path, and adds browser-side defence-in-depth headers. Full audit record in
+`docs/SECURITY.md`.
+
+### Highlights
+
+- **Stored XSS removed** — `dataset_info.html` no longer applies `|safe` to
+  admin-authored `name`, `description`, or `data_source`. A new
+  `sanitise_markup` template filter (`datasetapp/templatetags/extra_tags.py`)
+  passes the two text fields through `bleach` with a small tag/attribute
+  allowlist (`a, b, i, em, strong, sub, sup, code, br, p, span, ul, ol, li,
+  dl, dt, dd`); LaTeX in `\(...\)` still renders via MathJax. The contradictory
+  `|safe|escape` chain on `special_message` is removed entirely — the
+  homepage intro markup is now inlined in `all_datasets.html`.
+- **`download_dataset` reliability** — input is now validated against
+  `^[a-z0-9-]+\.[a-z]{3}$` before any DB lookup, so requests like
+  `/file/foo`, `/file/foo.bar.csv`, or `/file/.csv` return 404 instead of
+  raising `ValueError → 500`. `split(".")` was replaced with `rsplit(".", 1)`.
+- **CSV preview ReDoS removed** — `_csv_preview` no longer calls
+  `csv.Sniffer().sniff(...)`, which had catastrophic-backtracking behaviour
+  on adversarial input and was reachable from any visitor hitting a detail
+  page. The default `csv.excel` dialect is used unconditionally.
+- **`_download_series` cached** — the 365-day per-dataset aggregation is
+  now cached for one hour via `django.core.cache`, removing the
+  unbounded-scan-per-request future-DoS as the `Hit` table grows.
+- **File upload validation** — `DataFile.link_to_file` gains a
+  `FileExtensionValidator(["csv","xls","xlsx","xml","mat"])`, and
+  `DataFile.clean()` rejects mismatches between the declared `file_type`
+  and the actual extension. Stops an admin from uploading `.html` masquerading
+  as `.csv`.
+- **Admin tightened** — `list_per_page` reduced from 2000 to 100 on all
+  three admins. `HitAdmin` gains `readonly_fields = ("dataset_hit",
+  "date_and_time")` (audit log, append-only), plus `date_hierarchy` +
+  `list_filter` so scoping doesn't require loading the whole table.
+- **Security headers** — new `openmv.middleware.SecurityHeadersMiddleware`
+  emits `Content-Security-Policy`, `Permissions-Policy`, and
+  `Cross-Origin-Opener-Policy: same-origin`. The CSP keeps `'unsafe-inline'`
+  for `script-src` / `style-src` because `base.html` and `dataset_info.html`
+  inline both today; externalising those is the follow-up that lets us drop
+  the relaxation.
+- **Cookie flags** — `prod.py` now explicitly sets
+  `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE = "Lax"`,
+  `CSRF_COOKIE_HTTPONLY`, `CSRF_COOKIE_SAMESITE = "Lax"`. Matches Django
+  defaults but is now documented and immune to upstream default changes.
+- **Upload limits** — `base.py` adds `DATA_UPLOAD_MAX_MEMORY_SIZE`,
+  `FILE_UPLOAD_MAX_MEMORY_SIZE` (both 5 MiB), and `FILE_UPLOAD_PERMISSIONS = 0o644`.
+- **CDN scripts pinned** — MathJax `2.7.9` and ECharts `5.5.1` instead of
+  the floating `mathjax@2` / `echarts@5`. SRI hashes can be added with
+  `make sri` once a network-connected maintainer runs it (the templates
+  ship with `crossorigin="anonymous"` already in place).
+- **Supply chain** — `Dockerfile` pins `ghcr.io/astral-sh/uv` to `0.8.17`
+  instead of `:latest`. `ci.yml` adds `permissions: contents: read` and a
+  non-blocking `pip-audit` step. `pyproject.toml` adds lower bounds to the
+  three previously unpinned runtime deps and adds `pip-audit` to the dev
+  group.
+- **Tests** — new `datasetapp/tests/test_security.py` pins each finding so
+  future refactors can't quietly re-open them: bleach allowlist behaviour,
+  detail-page rendering, `download_dataset` 404 paths, `DataFile.clean`,
+  `_csv_preview` error path, security-header presence, cache behaviour,
+  removed `special_message` context.
+- **Docs** — `docs/SECURITY.md` is now the canonical security record:
+  full audit table (severity, file:line, status), host-side recommendations
+  (Caddy admin rate-limit, Cloudflare WAF, fail2ban), and the vulnerability
+  reporting paragraph. Top-level `SECURITY.md` points GitHub's "Security"
+  tab at it. CLAUDE.md updated to match.
+
+### Operational notes
+
+- **Lockfile must be regenerated** before merge: run `uv lock` locally and
+  commit `uv.lock`. CI's `uv sync --frozen` will fail until that lands.
+  (The sandbox where this PR was prepared had no PyPI access.)
+- **SRI hashes are pending**: `make sri` prints the values to insert into
+  the two CDN `<script>` tags. Documented as a one-line follow-up edit.
+- **GitHub Actions are still tag-pinned** (`@v4`, `@v6`); SHA-pinning is
+  documented as a follow-up issue, deferred for the same network reason.
+- **HSTS preload** is intentionally not flipped on yet — the staged
+  rollout in `prod.py`'s comment still applies.
+
 ## v1.3.0
 
 Privacy fix for the `Hit` table — closes #17 and clears the last

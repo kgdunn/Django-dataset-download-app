@@ -14,6 +14,7 @@ import io
 import itertools
 import json
 import logging
+import re
 
 # Django imports
 from django.core.cache import cache
@@ -28,6 +29,13 @@ from django.utils import timezone
 from .models import DataFile, Dataset, Hit, Tag
 
 log_file = logging.getLogger("datasetapp")
+
+# Public download URLs are restricted to a slug + 3-letter extension, matching
+# Dataset.slug (a SlugField) and DataFile.file_type (always 3 letters today:
+# CSV / XLS / XML / MAT). Anything else returns 404 — earlier the view raised
+# ValueError on a missing/extra dot, which surfaced as a 500 and noise in the
+# logs.
+_DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3}$")
 
 
 def display_by_tag(request, tag):
@@ -52,20 +60,21 @@ def display_all(request):
     Displays all datasets in a table form, with brief summaries.
     """
     dataset_list = Dataset.objects.order_by("slug")[:]
-    context = {
-        "dataset_list": dataset_list,
-        "special_message": (
-            "<p>You are generally free to use these datasets in any way you like. Please "
-            "click on the dataset name to find out more information about it. "
-            "<p>All data sets are used in the book "
-            '<a href=http://learnche.org/pid>"Process Improvement using Data"</a>'
-        ),
-    }
+    context = {"dataset_list": dataset_list}
     return TemplateResponse(request, "datasetapp/all_datasets.html", context)
 
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
-    """First ``max_rows`` data rows of a CSV ``DataFile`` (header + rows), or None."""
+    """First ``max_rows`` data rows of a CSV ``DataFile`` (header + rows), or None.
+
+    The CSV is parsed with the default ``csv.excel`` dialect — the previous
+    ``csv.Sniffer().sniff(...)`` call was reachable from any visitor hitting
+    the detail page and has known catastrophic-backtracking behaviour on
+    adversarial CSV input, so a malicious upload could pin a worker.
+    Deterministic dialect = no DoS; the trade-off is that semicolon /
+    tab-separated files now render as a single-column preview, which is
+    acceptable for a preview (the underlying download is unaffected).
+    """
     if file_obj is None or file_obj.file_type.upper() != "CSV":
         return None
     cache_key = f"csv_preview:{file_obj.id}:{max_rows}"
@@ -76,11 +85,7 @@ def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
         with file_obj.link_to_file.open("rb") as fh:
             raw = fh.read(max_bytes)
         text = raw.decode("utf-8", errors="replace")
-        try:
-            dialect = csv.Sniffer().sniff(text[:2048], delimiters=",;\t")
-        except csv.Error:
-            dialect = csv.excel
-        reader = csv.reader(io.StringIO(text), dialect)
+        reader = csv.reader(io.StringIO(text), csv.excel)
         rows = list(itertools.islice(reader, max_rows + 1))
     except Exception as e:
         log_file.warning("CSV preview failed for DataFile %s: %s", file_obj.id, e)
@@ -90,7 +95,18 @@ def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
 
 
 def _download_series(dataset, days=365):
-    """List of ``[yyyy-mm-dd, count]`` pairs for the last ``days`` days, zero-filled."""
+    """List of ``[yyyy-mm-dd, count]`` pairs for the last ``days`` days, zero-filled.
+
+    Cached for one hour per dataset: the table grows monotonically and the
+    aggregation walks the whole window on every call. Cache invalidates
+    naturally on the hour; a missed download won't appear in the sparkline
+    until then, which is fine for a 365-day chart.
+    """
+    cache_key = f"download_series:{dataset.pk}:{days}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     today = timezone.now().date()
     start = today - datetime.timedelta(days=days - 1)
     counts = (
@@ -100,13 +116,15 @@ def _download_series(dataset, days=365):
         .annotate(n=Count("id"))
     )
     counts_by_day = {row["day"]: row["n"] for row in counts}
-    return [
+    series = [
         [
             (start + datetime.timedelta(days=i)).isoformat(),
             counts_by_day.get(start + datetime.timedelta(days=i), 0),
         ]
         for i in range(days)
     ]
+    cache.set(cache_key, series, 60 * 60)
+    return series
 
 
 def about_dataset(request, dataset_name=None):
@@ -172,17 +190,24 @@ def download_dataset(request, file_name=None):
 
     We arrive by: http://localhost/file/cheddar-cheese.csv
     We redirect the user to http://localhost/media/datasets/cheddar-cheese.csv
-    Make sure your Apache settings are set to intercept that request before it hits Django
-
+    In production Caddy serves /media/ before the request reaches Django.
     """
     # django-name='dataset-download'
-    file_name = file_name.lower()
-    [base_name, extension] = file_name.split(".")
+    file_name = (file_name or "").lower()
+
+    # Reject anything that isn't slug+single-dot+3-letter extension up front,
+    # so a stray dot (or no dot at all) returns 404 rather than crashing the
+    # view with a ValueError that surfaces as a 500.
+    if not _DOWNLOAD_FILENAME_RE.match(file_name):
+        log_file.warning("Rejected malformed download filename: %r", file_name)
+        return HttpResponse("File not found", status=404)
+
+    base_name, extension = file_name.rsplit(".", 1)
 
     # Which ``dataset`` object did this come from.  The file_name is the same
     # as the ``dataset`` object's slug (also the primary key) field.
     # Once we have the dataset, we can narrow down the file type with the
-    # extension
+    # extension.
     dataset_instance = Dataset.objects.filter(slug=base_name).first()
     if dataset_instance is None:
         log_file.warning(

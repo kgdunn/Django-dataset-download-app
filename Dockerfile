@@ -3,7 +3,9 @@
 # ---- builder ------------------------------------------------------------
 FROM python:3.11-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Pinned to a specific uv version so a malicious push to ghcr.io/astral-sh/uv
+# can't land in our build. Bump in lockstep with `uv self update`.
+COPY --from=ghcr.io/astral-sh/uv:0.8.17 /uv /usr/local/bin/uv
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \

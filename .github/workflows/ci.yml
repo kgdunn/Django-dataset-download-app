@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,6 +28,10 @@ jobs:
           --health-retries 5
 
     steps:
+      # TODO(security): swap the floating tags below for full commit SHAs
+      # (docs/SECURITY.md → "Issues to file" → action-SHA-pinning) once the
+      # maintainer confirms the SHAs. Tags can be re-pointed by the action
+      # owner; SHAs cannot.
       - uses: actions/checkout@v4
 
       - name: Install uv
@@ -48,3 +55,10 @@ jobs:
           POSTGRES_PASSWORD: openmv
           SQL_HOST: 127.0.0.1
           SQL_PORT: "5432"
+
+      - name: Audit dependencies (pip-audit)
+        # Non-blocking for now: surfaces known CVEs in the resolved tree
+        # without failing the build. Tighten to `--strict` once the
+        # baseline is clean.
+        continue-on-error: true
+        run: uv run pip-audit --progress-spinner=off

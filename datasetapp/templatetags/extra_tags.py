@@ -1,7 +1,61 @@
+import bleach
 from django import template
 from django.template.defaultfilters import stringfilter
+from django.utils.safestring import mark_safe
 
 register = template.Library()
+
+
+# Bleach allowlist for the small bit of inline HTML that admins type into
+# Dataset.description and Dataset.data_source. Anything outside this list is
+# stripped at render time, so an admin (or anyone who briefly gets admin
+# access) cannot inject <script>, <iframe>, or event-handler attributes that
+# would execute in a visitor's browser.
+_ALLOWED_TAGS = frozenset(
+    [
+        "a",
+        "b",
+        "i",
+        "em",
+        "strong",
+        "sub",
+        "sup",
+        "code",
+        "br",
+        "p",
+        "span",
+        "ul",
+        "ol",
+        "li",
+        "dl",
+        "dt",
+        "dd",
+    ]
+)
+_ALLOWED_ATTRS = {
+    "a": ["href", "title", "rel"],
+    "span": ["class"],
+}
+_ALLOWED_PROTOCOLS = frozenset(["http", "https", "mailto"])
+
+
+@register.filter(name="sanitise_markup")
+def sanitise_markup(value):
+    """Render admin-authored HTML safely.
+
+    LaTeX in ``\\(...\\)`` is left untouched: bleach escapes the backslashes
+    as text, MathJax then re-parses the rendered DOM and renders the math.
+    """
+    if value is None:
+        return ""
+    cleaned = bleach.clean(
+        str(value),
+        tags=_ALLOWED_TAGS,
+        attributes=_ALLOWED_ATTRS,
+        protocols=_ALLOWED_PROTOCOLS,
+        strip=True,
+    )
+    return mark_safe(cleaned)  # noqa: S308 — sanitised one line above
 
 
 @stringfilter

@@ -18,7 +18,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<!--
+  Pinned to a specific patch version so jsDelivr cannot silently serve a
+  different build than the one we tested with. Add an `integrity="sha384-…"`
+  attribute (run `make sri` to compute) once the maintainer has network
+  access to the CDN; the version pin alone already removes the `echarts@5`
+  floating-tag risk.
+-->
+<script crossorigin="anonymous"
+    src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 
 <style>
 :root {

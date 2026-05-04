@@ -1,7 +1,7 @@
 {% extends "datasetapp/base.html" %}
 {% load extra_tags %}
 
-{% block title %}{{ds.name|safe}}-OpenMV.net Datasets{% endblock %}
+{% block title %}{{ ds.name }}-OpenMV.net Datasets{% endblock %}
 {% block body %}
 <p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
 
@@ -10,8 +10,8 @@
 <div class="detail-grid">
     <div id="dataset-content">
         <dl class="dataset-meta">
-            <dt>Description</dt>        <dd>{{ ds.description|safe }}</dd>
-            <dt>Data source</dt>        <dd>{{ ds.data_source|safe }}</dd>
+            <dt>Description</dt>        <dd>{{ ds.description|sanitise_markup }}</dd>
+            <dt>Data source</dt>        <dd>{{ ds.data_source|sanitise_markup }}</dd>
             <dt>Data shape</dt>         <dd><span class="numeric">{{ ds.rows }}</span> rows and <span class="numeric">{{ ds.cols }}</span> columns</dd>
             <dt>Usage restrictions</dt> <dd>{{ ds.usage_restrictions }}</dd>
             <dt>Contact person</dt>     <dd>{{ ds.author_name }}</dd>
@@ -150,8 +150,15 @@ df.describe()</code></pre>
 </div>
 {% endif %}
 
-<script type="text/javascript"
-    src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<!--
+  Pinned to a specific patch version so jsDelivr cannot silently serve a
+  different build than the one we tested with. Add an `integrity="sha384-…"`
+  attribute (run `make sri` to compute) once the maintainer has network
+  access to the CDN; the version pin alone already removes the
+  `mathjax@2` floating-tag risk.
+-->
+<script type="text/javascript" crossorigin="anonymous"
+    src="https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
 <nav class="detail-nav">
     {% if prev_dataset %}

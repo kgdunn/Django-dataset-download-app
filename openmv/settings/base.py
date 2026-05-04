@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "openmv.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -138,6 +139,14 @@ MEDIA_ROOT = BASE_DIR / "media"
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Upload limits. Datasets uploaded through the admin are tiny (a few hundred
+# KB at most); anything larger is almost certainly an accident or abuse.
+# Capping these prevents a single oversized multipart from OOM-ing a worker.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MiB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MiB
+FILE_UPLOAD_PERMISSIONS = 0o644
 
 
 # Logging

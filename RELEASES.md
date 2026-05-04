@@ -1,5 +1,21 @@
 # Releases
 
+## v1.5.1
+
+Documentation-only follow-up to v1.4.0's S3 backup work. No code changes.
+
+- **`docs/backup.md`**: new end-to-end backup runbook for a future
+  maintainer. Covers AWS bucket creation, IAM user + scoped policy,
+  access-key generation, the Hetzner-side AWS CLI v2 install, `.env`
+  population, smoke-test, S3 verification, cron install, nightly run
+  verification, restore drill, full disaster recovery, and a
+  troubleshooting block.
+- **CLAUDE.md** *Backups → Host prerequisite*: the previous `sudo apt
+  install awscli` line was wrong on Ubuntu 24.04 (the `awscli` apt
+  package was dropped). Replaced with `sudo snap install aws-cli
+  --classic` (the supported v2 path on Ubuntu 24.04) and a cross-link
+  to `docs/backup.md` for the full runbook.
+
 ## v1.5.0
 
 Security audit and hardening pass. Behaviour-preserving for normal visitors;

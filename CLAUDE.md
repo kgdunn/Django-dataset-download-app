@@ -140,8 +140,11 @@ the bucket.
 
 ### Host prerequisite
 
-The Hetzner VPS needs the AWS CLI on the host (not in the container — the
-script calls `aws` directly). One-shot: `sudo apt install awscli`.
+The Hetzner VPS needs the AWS CLI v2 on the host (not in the container —
+the script calls `aws` directly). On Ubuntu 24.04 the `awscli` apt
+package is gone; use snap instead: `sudo snap install aws-cli --classic`.
+Full step-by-step (AWS bucket + IAM, Hetzner install, smoke-test, restore
+drill, troubleshooting) is in [`docs/backup.md`](docs/backup.md).
 
 ### Cron entry (run as `deploy`)
 

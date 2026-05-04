@@ -1,5 +1,29 @@
 # Releases
 
+## v1.6.0
+
+Sortable columns on the homepage / tag-filter table (issue #81). Click any
+column header (Name, Description, Rows, Columns, Tags) to sort ascending;
+click again to flip to descending. The active column shows an up/down
+arrow; the others are unsorted.
+
+- **`datasetapp/templates/datasetapp/all_datasets.html`**: header `<td>`s
+  promoted to `<th scope="col">` wrapping a `<button class="col-sort">`,
+  body cells annotated with `data-sort-key` + `data-sort-value` (lower-cased
+  text for textual columns, raw integers for `Rows` / `Columns`, joined tag
+  names for the tag column). Inline script reorders `<tr>` elements in
+  place — no network calls, no re-render of the row body, and tag links
+  stay clickable. Default order on load is the server-side `slug`
+  ordering, marked `aria-sort="ascending"` on the Name column.
+- **`datasetapp/templates/datasetapp/base.html`**: CSS for the new
+  `.col-sort` button (full-width hit target, hover affordance) and the
+  up/down/unsorted arrow indicator driven by `aria-sort` (mask-image SVG,
+  inherits `currentColor` so it tracks light / dark theme).
+
+Behaviour-preserving for visitors with JavaScript disabled: the table
+still renders in the existing slug order and column header text remains
+visible — only the click-to-sort affordance is lost.
+
 ## v1.5.1
 
 Documentation-only follow-up to v1.4.0's S3 backup work. No code changes.

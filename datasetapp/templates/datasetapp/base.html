@@ -289,14 +289,47 @@ p  { margin: 0 0 var(--sp-3) 0; }
     box-shadow: var(--shadow-sm);
 }
 .dataset-table thead { background: var(--color-surface-2); }
-.dataset-table thead td {
+.dataset-table thead td,
+.dataset-table thead th {
     font-family: var(--font-sans); font-weight: 600;
     font-size: var(--fs-xs);
     text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--color-text-subtle);
-    padding: var(--sp-3);
+    padding: 0;
     text-align: left;
     border-bottom: 1px solid var(--color-border);
+}
+.dataset-table thead .col-sort {
+    width: 100%;
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+    padding: var(--sp-3);
+    font: inherit; color: inherit;
+    text-transform: inherit; letter-spacing: inherit;
+    text-align: left;
+    background: none; border: 0;
+    cursor: pointer;
+    transition: color var(--transition), background var(--transition);
+}
+.dataset-table thead .col-sort:hover { color: var(--color-text); background: var(--color-surface); }
+.dataset-table thead .col-sort::after {
+    content: "";
+    width: 8px; height: 12px; flex: 0 0 8px;
+    background: currentColor;
+    opacity: 0.35;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 0 L8 4 L0 4 Z M4 12 L0 8 L8 8 Z' fill='black'/></svg>") center/contain no-repeat;
+            mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 0 L8 4 L0 4 Z M4 12 L0 8 L8 8 Z' fill='black'/></svg>") center/contain no-repeat;
+}
+.dataset-table thead [aria-sort="ascending"] .col-sort,
+.dataset-table thead [aria-sort="descending"] .col-sort { color: var(--color-text); }
+.dataset-table thead [aria-sort="ascending"] .col-sort::after {
+    opacity: 1;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 0 L8 4 L0 4 Z' fill='black'/></svg>") center/contain no-repeat;
+            mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 0 L8 4 L0 4 Z' fill='black'/></svg>") center/contain no-repeat;
+}
+.dataset-table thead [aria-sort="descending"] .col-sort::after {
+    opacity: 1;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 12 L0 8 L8 8 Z' fill='black'/></svg>") center/contain no-repeat;
+            mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'><path d='M4 12 L0 8 L8 8 Z' fill='black'/></svg>") center/contain no-repeat;
 }
 .dataset-table tbody td {
     padding: var(--sp-3);

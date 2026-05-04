@@ -1,5 +1,30 @@
 # Releases
 
+## v1.6.2
+
+Defence-in-depth follow-up to v1.5.0's CDN pinning. Adds Subresource
+Integrity (SRI) `sha384` hashes to the two `<script>` tags that load
+ECharts and MathJax from `cdn.jsdelivr.net`, so a tampered or substituted
+CDN response is refused by the browser. Closes Issue K in
+`docs/SECURITY.md` (and the SRI half of finding 10).
+
+- **`datasetapp/templates/datasetapp/base.html`**: ECharts `<script>`
+  gets `integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"`.
+  Comment block above the tag is updated — the old "add this once the
+  maintainer has network access" TODO is gone, replaced with a one-liner
+  pointing readers at `make sri` if the pinned version ever changes.
+- **`datasetapp/templates/datasetapp/dataset_info.html`**: MathJax
+  `<script>` gets `integrity="sha384-vi9R4hb1goLJPJDHY+dOmXxcY3HGv6tJIwHxy5JunOTxJGHbsSuubPgl++SNxYYi"`.
+  The comment notes that the hash is over `MathJax.js`'s bytes and that
+  the `?config=TeX-AMS-MML_HTMLorMML` query string is ignored by jsDelivr
+  for static files (so SRI still matches).
+- **`docs/SECURITY.md`**: Issue K marked **Fixed in v1.6.2**; finding 10
+  closed for the CDN-script half. Vendoring (Issue D / #72) remains the
+  fuller fix and is still open.
+- The `make sri` target in `Makefile` (added in v1.5.0) is unchanged —
+  it remains the canonical way to recompute hashes if either CDN script
+  is ever bumped to a new patch version.
+
 ## v1.6.1
 
 Operational follow-up to v1.5.0's audit. Adds a Docker liveness probe so a

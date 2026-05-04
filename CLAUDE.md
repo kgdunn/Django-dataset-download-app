@@ -85,6 +85,91 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 - **Manual deploy** (rollback, hotfix, debugging): from `/home/deploy/openmv/repo/`, run `git pull && docker compose -f docker-compose.prod.yml up -d --build` directly.
 - **Public IPs**: IPv4 `178.104.167.195`, IPv6 `2a01:4f8:1c19:2380::1`. Behind Cloudflare's anycast for the apex; visible directly only for `test.openmv.net`.
 
+## Backups
+
+Off-host backups go to AWS S3 — deliberately a different cloud provider /
+account from the Hetzner VPS so a compromise of one doesn't reach the other.
+The Hetzner-side script is `bin/backup-openmv.sh`; it runs nightly under
+`deploy` from cron and does three things on every invocation:
+
+1. **Postgres dump** of the running `db` container via
+   `docker compose -f docker-compose.prod.yml exec -T db pg_dump --clean --if-exists`,
+   gzipped, uploaded to
+   `s3://$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/db/daily/db_openmv-YYYY-MM-DD.sql.gz`.
+   The same dump is also copied to `db/monthly/db_openmv-YYYY-MM.sql.gz` on
+   the 1st of each month, and to `db/yearly/db_openmv-YYYY.sql.gz` on Jan 1.
+2. **`aws s3 sync`** of `data/media/` → `…/media/` and `data/public/` →
+   `…/public/`. No `--delete` flag — an accidental local rm or detached bind
+   mount must not propagate to the off-host copy. `data/static/` is
+   intentionally **not** backed up because `collectstatic` regenerates it on
+   every container start.
+3. **Retention pruning** by S3 `LastModified`: `db/daily/` keeps the 15
+   most recent objects, `db/monthly/` keeps 12, `db/yearly/` is never pruned.
+
+S3 layout:
+
+```
+s3://$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/
+├── db/
+│   ├── daily/    db_openmv-2026-05-04.sql.gz   (≤15)
+│   ├── monthly/  db_openmv-2026-05.sql.gz      (≤12)
+│   └── yearly/   db_openmv-2026.sql.gz         (∞)
+├── media/        mirror of data/media/
+└── public/       mirror of data/public/
+```
+
+### Configuration
+
+`bin/backup-openmv.sh` sources the same `.env` the prod stack uses. The
+keys it needs on top of the existing `POSTGRES_*` set:
+
+```
+AWS_ACCESS_KEY_ID=…
+AWS_SECRET_ACCESS_KEY=…
+AWS_DEFAULT_REGION=eu-central-1
+BACKUP_S3_BUCKET=openmv-backups
+BACKUP_S3_PREFIX=openmv
+```
+
+The IAM principal those keys belong to should be scoped to `s3:PutObject`,
+`s3:GetObject`, `s3:DeleteObject`, and `s3:ListBucket` on
+`arn:aws:s3:::$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/*` only — nothing else.
+Enable bucket versioning + SSE-S3 (default since Jan 2023) when creating
+the bucket.
+
+### Host prerequisite
+
+The Hetzner VPS needs the AWS CLI on the host (not in the container — the
+script calls `aws` directly). One-shot: `sudo apt install awscli`.
+
+### Cron entry (run as `deploy`)
+
+```
+35 21 * * *  /home/deploy/openmv/repo/bin/backup-openmv.sh \
+    >> /home/deploy/openmv/backups/backup.log 2>&1
+```
+
+Same time the Linode cron used to run. The script is *not* installed
+automatically by `bin/deploy-impl.sh`; cron lives outside the repo because
+its presence and schedule are operational state, not application state.
+
+### Restore
+
+```bash
+# Database (daily snapshot)
+aws s3 cp s3://$BACKUP_S3_BUCKET/openmv/db/daily/db_openmv-YYYY-MM-DD.sql.gz - \
+  | gunzip \
+  | docker compose -f docker-compose.prod.yml exec -T db \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+
+# Datasets (pull missing files back; --delete deliberately omitted)
+aws s3 sync s3://$BACKUP_S3_BUCKET/openmv/media/ data/media/
+aws s3 sync s3://$BACKUP_S3_BUCKET/openmv/public/ data/public/
+```
+
+`data/static/` is rebuilt automatically by the next container start —
+don't restore it.
+
 ## Gotchas worth knowing before editing
 
 1. **`DatasetManager.get_queryset` filters out `is_hidden=True` rows from the public site _and_ from the admin list.** `Dataset.objects` is the only manager, so the admin's `DatasetAdmin` queryset is filtered too. To re-edit a hidden dataset, flip `is_hidden` directly in the DB (`./manage.py shell` or a `psql` session) — there is no `all_objects` escape hatch.
@@ -93,7 +178,8 @@ Cloudflare (proxied, orange cloud) ──HTTPS──> Caddy on Hetzner host (TLS
 4. **`DataFile.objects.filter(...)[0]` in `download_dataset`** still uses `[0]` indexing inside a `try/except IndexError`. If you "tidy" it to `.first()`, preserve the same 404 path. (The two `Dataset.objects.filter(...)[0]` siblings have already been migrated to `.first()` + `None` check.)
 5. **`special_message` is rendered with `|safe|escape`** in `all_datasets.html`. The chain is contradictory; `safe` wins. The string is set in the view (not user input), so it's not exploitable today, but don't add user-controlled content to it.
 6. **The `datasetapp` logger is configured by the `LOGGING` dict in `openmv/settings/base.py`** and writes to stdout via a `StreamHandler`. In the production Docker container that means `docker logs` (and any host log shipper) captures everything; locally it streams to the `runserver` terminal. Override the level for ad-hoc debugging by setting `DATASETAPP_LOG_LEVEL=DEBUG` in `.env` or the process env.
-7. **Migration `0002_drop_hit_pii` is what destroys legacy IP / User-Agent / referrer data** in any database that pre-dates v1.3.0 — the columns are dropped, taking every existing value with them. There is no separate retention job because the schema itself no longer holds PII. If you ever restore a pre-v1.3.0 backup, re-run `manage.py migrate` to re-trim it.
+7. **`bin/backup-openmv.sh` deliberately skips `data/static/`.** It mirrors `data/media/` (datasets — the irreplaceable bytes) and `data/public/` (the small Apache-era files), but `collectstatic` regenerates `data/static/` on every container start, so backing it up would just be padding. If you ever add a file under `data/static/` that *isn't* `collectstatic` output, fix the source — don't extend the backup script.
+8. **Migration `0002_drop_hit_pii` is what destroys legacy IP / User-Agent / referrer data** in any database that pre-dates v1.3.0 — the columns are dropped, taking every existing value with them. There is no separate retention job because the schema itself no longer holds PII. If you ever restore a pre-v1.3.0 backup, re-run `manage.py migrate` to re-trim it.
 
 ## Tooling
 

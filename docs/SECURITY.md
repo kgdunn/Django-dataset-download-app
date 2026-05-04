@@ -91,7 +91,13 @@ In the Cloudflare dashboard for `openmv.net`:
 3. **Caching → Page Rules** → "URL: `*openmv.net/admin/*`" → Cache Level: Bypass.
 
 `test.openmv.net` is DNS-only (grey cloud) so these rules don't apply
-there — Caddy is the only filter for staging.
+there — Caddy is the only filter for staging. Because `test.openmv.net`
+bypasses Cloudflare's edge, Caddy must serve a publicly-trusted cert on
+that hostname directly; the Cloudflare Origin Certificate used for
+`openmv.net` / `www.openmv.net` is signed by Cloudflare's internal CA
+and is only trusted when consumed by Cloudflare. See
+[`docs/caddy.md`](caddy.md) for the canonical site-block split that
+keeps `test.openmv.net` on Let's Encrypt (issue #89).
 
 #### Bot Fight Mode and dataset downloads
 

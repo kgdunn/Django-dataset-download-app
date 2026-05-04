@@ -1,5 +1,42 @@
 # Releases
 
+## v1.6.5
+
+Docs-only PATCH for issue #89. The reviewer smoke-test from PR #88
+(`pd.read_csv("https://test.openmv.net/file/aeration-rate.csv")` and a
+browser visit to the same hostname) failed with
+`net::ERR_CERT_AUTHORITY_INVALID` / `URLError: <urlopen error [SSL:
+CERTIFICATE_VERIFY_FAILED]...>`. Root cause: the host's
+`/etc/caddy/Caddyfile` had merged `openmv.net`, `www.openmv.net`, and
+`test.openmv.net` into a single site block that loads the Cloudflare
+Origin Certificate via `tls /etc/caddy/origin-certs/openmv.net/...`.
+That cert is signed by Cloudflare's internal CA and is only trusted
+when Cloudflare's edge consumes it; `test.openmv.net` is DNS-only
+(grey cloud) so direct clients see the Origin CA cert and reject it.
+
+The application code is unaffected — the actual fix is operational
+(split the Caddyfile so `test.openmv.net` has its own site block with
+no `tls` directive, letting Caddy's automatic HTTPS path issue a
+Let's Encrypt cert via ACME HTTP-01). This release captures the
+canonical Caddyfile structure in the repo so the host config has a
+documented target.
+
+- **`docs/caddy.md`** *(new)*: canonical Caddyfile structure with two
+  site blocks (Origin Cert for prod, Let's Encrypt for staging), a
+  shared `(openmv_common)` snippet for `/static`, `/media`, public
+  files, and the gunicorn upstream, plus an `openssl s_client`
+  verification recipe and a troubleshooting checklist for failed
+  ACME HTTP-01 challenges (Cloudflare proxy still on, port 80
+  unreachable, Let's Encrypt rate-limit fallback to internal CA).
+- **`CLAUDE.md`**: Production-deployment TLS bullet expanded — explicit
+  warning that prod and staging must live in separate Caddy site
+  blocks, that the Cloudflare Origin CA is not in any public trust
+  store, and that `test.openmv.net`'s site block must have no `tls`
+  directive. Cross-references `docs/caddy.md`.
+- **`docs/SECURITY.md`**: existing `test.openmv.net is DNS-only`
+  paragraph extended with the same Origin-CA-vs-Let's-Encrypt
+  reasoning and a pointer to `docs/caddy.md`.
+
 ## v1.6.4
 
 Bugfix for issue #86 — `pandas.read_csv("https://openmv.net/file/<slug>.csv")`

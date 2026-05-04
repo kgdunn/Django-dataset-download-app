@@ -1,5 +1,33 @@
 # Releases
 
+## v1.6.3
+
+Bugfix for v1.5.0's bleach allowlist: `<img>` was not on the list, so any
+image an admin had embedded in `Dataset.description` or `Dataset.data_source`
+disappeared from the detail page after the security-hardening release. The
+allowlist now permits `<img>` with a tightly scoped attribute set, so legacy
+dataset figures render again without re-opening the XSS hole that finding 1
+in `docs/SECURITY.md` closed.
+
+- **`datasetapp/templatetags/extra_tags.py`**: `"img"` added to
+  `_ALLOWED_TAGS`; `_ALLOWED_ATTRS["img"]` set to
+  `["src", "alt", "title", "width", "height"]`. Event-handler attributes
+  (`onerror`, `onload`, …) are not on the list, so bleach drops them; `src`
+  values are filtered against `_ALLOWED_PROTOCOLS` (`http`, `https`,
+  `mailto`), so `javascript:` URLs are rejected. The CSP `img-src 'self'
+  data:` in `openmv/middleware.py` is unchanged — same-origin `/media/...`
+  references are what admins use in practice.
+- **`datasetapp/tests/test_security.py`**: new
+  `test_sanitise_markup_strips_event_handlers_from_img` pins the
+  attribute-stripping contract; `test_sanitise_markup_preserves_allowed_tags`
+  parametrised with a benign `<img src="/media/datasets/foo.png" alt="…">`
+  case; `test_detail_page_does_not_render_admin_supplied_script` updated to
+  expect `<img` to survive but `onerror` / `onload` / `javascript:` to be
+  stripped (the original assertion that *no* `<img` survived is what locked
+  the regression in).
+- **`docs/SECURITY.md`**: finding 1's "Fixed in v1.5.0" cell amended with a
+  pointer to the v1.6.3 follow-up.
+
 ## v1.6.2
 
 Defence-in-depth follow-up to v1.5.0's CDN pinning. Adds Subresource

@@ -30,11 +30,16 @@ _ALLOWED_TAGS = frozenset(
         "dl",
         "dt",
         "dd",
+        "img",
     ]
 )
 _ALLOWED_ATTRS = {
     "a": ["href", "title", "rel"],
     "span": ["class"],
+    # <img>: src/alt/title/width/height only. Event handlers (onerror,
+    # onload, …) are dropped because they're not on this list, and bleach
+    # filters src by _ALLOWED_PROTOCOLS so `javascript:` is rejected.
+    "img": ["src", "alt", "title", "width", "height"],
 }
 _ALLOWED_PROTOCOLS = frozenset(["http", "https", "mailto"])
 

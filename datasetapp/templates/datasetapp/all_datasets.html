@@ -21,7 +21,7 @@ Datasets{% endif %}{% endblock %}
 {% endif %}
 
 <div class="dataset-results">
-    <table class="dataset-table">
+    <table class="dataset-table" id="dataset-table">
         <colgroup>
             <col class="col-name">
             <col class="col-desc">
@@ -31,22 +31,22 @@ Datasets{% endif %}{% endblock %}
         </colgroup>
         <thead>
             <tr>
-                <td>Name</td>
-                <td>Description</td>
-                <td>Rows</td>
-                <td>Columns</td>
-                <td>Tags</td>
+                <th scope="col" aria-sort="ascending"><button type="button" class="col-sort" data-sort-key="name" data-sort-type="text">Name</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="desc" data-sort-type="text">Description</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="rows" data-sort-type="number">Rows</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="cols" data-sort-type="number">Columns</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="tags" data-sort-type="text">Tags</button></th>
             </tr>
         </thead>
         <tbody>
         {% for dataset in dataset_list %}
         {% spaceless %}
         <tr class="dataset-row">
-            <td><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a></td>
-            <td>{{dataset.description|striptags}}</td>
-            <td class="dataset-rows">{{dataset.rows}}</td>
-            <td class="dataset-cols">{{dataset.cols}}</td>
-            <td>
+            <td data-sort-key="name" data-sort-value="{{ dataset.name|lower }}"><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a></td>
+            <td data-sort-key="desc" data-sort-value="{{ dataset.description|striptags|lower }}">{{dataset.description|striptags}}</td>
+            <td class="dataset-rows" data-sort-key="rows" data-sort-value="{{ dataset.rows }}">{{dataset.rows}}</td>
+            <td class="dataset-cols" data-sort-key="cols" data-sort-value="{{ dataset.cols }}">{{dataset.cols}}</td>
+            <td data-sort-key="tags" data-sort-value="{% for tag in dataset.tags.all %}{{ tag|lower }} {% endfor %}">
                 <div class="tag-list">
                 {% for tag in dataset.tags.all %}
                 <a href="{% url 'datasetapp:dataset-by-tag' tag %}" class="dataset-tag" title="{{tag.description}}">{{tag}}</a>
@@ -59,4 +59,51 @@ Datasets{% endif %}{% endblock %}
         </tbody>
     </table>
 </div>
+
+<script>
+(function () {
+    var table = document.getElementById('dataset-table');
+    if (!table) return;
+    var thead = table.tHead;
+    var tbody = table.tBodies[0];
+    if (!thead || !tbody) return;
+
+    var headerCells = thead.rows[0].cells;
+
+    function sortBy(key, type, dir) {
+        var rows = Array.prototype.slice.call(tbody.rows);
+        var mult = dir === 'descending' ? -1 : 1;
+        rows.sort(function (a, b) {
+            var av = a.querySelector('[data-sort-key="' + key + '"]').getAttribute('data-sort-value') || '';
+            var bv = b.querySelector('[data-sort-key="' + key + '"]').getAttribute('data-sort-value') || '';
+            if (type === 'number') {
+                var an = parseFloat(av);
+                var bn = parseFloat(bv);
+                if (isNaN(an) && isNaN(bn)) return 0;
+                if (isNaN(an)) return 1;
+                if (isNaN(bn)) return -1;
+                return (an - bn) * mult;
+            }
+            return av.localeCompare(bv) * mult;
+        });
+        var frag = document.createDocumentFragment();
+        rows.forEach(function (r) { frag.appendChild(r); });
+        tbody.appendChild(frag);
+    }
+
+    Array.prototype.forEach.call(headerCells, function (th) {
+        var btn = th.querySelector('.col-sort');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var current = th.getAttribute('aria-sort') || 'none';
+            var next = current === 'ascending' ? 'descending' : 'ascending';
+            Array.prototype.forEach.call(headerCells, function (other) {
+                other.setAttribute('aria-sort', 'none');
+            });
+            th.setAttribute('aria-sort', next);
+            sortBy(btn.dataset.sortKey, btn.dataset.sortType, next);
+        });
+    });
+})();
+</script>
 {% endblock %}

@@ -182,7 +182,7 @@ attached to the audit, not to a transient PR description.
 - **Severity:** Low.
 - **Why:** Caddy currently has no signal whether gunicorn is unhealthy mid-request beyond its own connect-failure detection.
 - **Proposed fix:** Add a lightweight `/healthz` view (returns `200 OK` with cache disabled and never touches the DB) and a `HEALTHCHECK CMD curl -fsS http://127.0.0.1:8000/healthz` in the runtime stage.
-- **Status:** **Fixed in v1.5.2** — `datasetapp.views.healthz` (decorated with `@never_cache`, no DB / template / auth) wired at `/healthz`; `Dockerfile` runtime stage installs `curl` and runs `HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 CMD curl -fsS http://127.0.0.1:8000/healthz`. Container flips to `(unhealthy)` within ~90 s of gunicorn going dark.
+- **Status:** **Fixed in v1.6.1** — `datasetapp.views.healthz` (decorated with `@never_cache`, no DB / template / auth) wired at `/healthz`; `Dockerfile` runtime stage installs `curl` and runs `HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 CMD curl -fsS http://127.0.0.1:8000/healthz`. Container flips to `(unhealthy)` within ~90 s of gunicorn going dark.
 
 ### Issue J — Pin GitHub Actions to full commit SHAs
 - **Severity:** Low (supply chain).

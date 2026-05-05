@@ -27,6 +27,7 @@ Datasets{% endif %}{% endblock %}
             <col class="col-desc">
             <col class="col-rows">
             <col class="col-cols">
+            <col class="col-downloads">
             <col class="col-tags">
         </colgroup>
         <thead>
@@ -35,6 +36,7 @@ Datasets{% endif %}{% endblock %}
                 <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="desc" data-sort-type="text">Description</button></th>
                 <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="rows" data-sort-type="number">Rows</button></th>
                 <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="cols" data-sort-type="number">Columns</button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="downloads" data-sort-type="number">Downloads</button></th>
                 <th scope="col" aria-sort="none"><button type="button" class="col-sort" data-sort-key="tags" data-sort-type="text">Tags</button></th>
             </tr>
         </thead>
@@ -46,6 +48,7 @@ Datasets{% endif %}{% endblock %}
             <td data-sort-key="desc" data-sort-value="{{ dataset.description|striptags|lower }}">{{dataset.description|striptags}}</td>
             <td class="dataset-rows" data-sort-key="rows" data-sort-value="{{ dataset.rows }}">{{dataset.rows}}</td>
             <td class="dataset-cols" data-sort-key="cols" data-sort-value="{{ dataset.cols }}">{{dataset.cols}}</td>
+            <td class="dataset-downloads" data-sort-key="downloads" data-sort-value="{{ dataset.num_downloads|default:0 }}">{{ dataset.num_downloads|default:0 }}</td>
             <td data-sort-key="tags" data-sort-value="{% for tag in dataset.tags.all %}{{ tag|lower }} {% endfor %}">
                 <div class="tag-list">
                 {% for tag in dataset.tags.all %}

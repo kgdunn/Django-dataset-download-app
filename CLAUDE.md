@@ -15,7 +15,7 @@ The Django site behind <https://openmv.net> — a dataset catalogue that lists, 
 - **Models** (`datasetapp/models.py`): `Tag`, `Dataset`, `DataFile`, `Hit`.
   - `Dataset` ↔ `Tag` is many-to-many.
   - `Dataset` ↔ `DataFile` is one-to-many (a dataset can have CSV + XLS + XML + MAT siblings).
-  - `Hit` records one download. Since v1.3.0 (#17) the table holds only `(dataset_hit, date_and_time)` — no IP, User-Agent, or referrer is captured. Two columns power both visible features: the per-dataset count on the detail page and the 365-day sparkline (`_download_series` in `datasetapp/views.py` groups rows by `TruncDate("date_and_time")`). Rows are kept indefinitely; the per-row history is fine to retain because no PII is stored.
+  - `Hit` records one download. Since v1.3.0 (#17) the table holds only `(dataset_hit, date_and_time)` — no IP, User-Agent, or referrer is captured. Two columns power three visible features: the per-dataset count on the detail page, the sortable Downloads column on the homepage / tag-filter list (v1.7.0, via a `Count("datafile__hit", distinct=True)` annotation in `_annotate_with_downloads`; desktop-only — the mobile card layout hides it), and the 365-day sparkline on the detail page (`_download_series` in `datasetapp/views.py` groups rows by `TruncDate("date_and_time")`). Rows are kept indefinitely; the per-row history is fine to retain because no PII is stored.
 - **Views** (`datasetapp/views.py`):
   - `display_all` — `/` — homepage table.
   - `display_by_tag` — `/tag/<slug>` — filter by tag.

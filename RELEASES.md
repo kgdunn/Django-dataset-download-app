@@ -1,5 +1,41 @@
 # Releases
 
+## v1.7.0
+
+Feature for issue #92 — the homepage table (and the per-tag filter view at
+`/tag/<slug>`) now includes a sortable **Downloads** column showing the
+all-time number of downloads per dataset. The count is the same value the
+detail page already exposes (one row per `Hit`), so visitors can sort the
+catalogue by popularity without leaving the index. Scoped to the desktop
+layout per the issue; the mobile card view hides the column to avoid
+crowding cards that already condense Rows/Cols inline.
+
+- **`datasetapp/views.py`**: new `_annotate_with_downloads(queryset)`
+  helper that adds a `num_downloads=Count("datafile__hit", distinct=True)`
+  annotation. `display_all` and `display_by_tag` route their queryset
+  through it before handing the list to the template. `distinct=True` is
+  required because `display_by_tag` filters via the `tags` M2M, and a
+  multi-tag match would otherwise multiply the Hit count by the number of
+  matching tags.
+- **`datasetapp/templates/datasetapp/all_datasets.html`**: new `<col
+  class="col-downloads">`, new sortable `<th>` with
+  `data-sort-key="downloads" data-sort-type="number"`, new `<td
+  class="dataset-downloads">` rendering `dataset.num_downloads|default:0`
+  with the same `data-sort-value` shape the existing JS sorter expects.
+- **`datasetapp/templates/datasetapp/base.html`**: column widths
+  rebalanced to fit the new column (Name 17%, Rows 8%, Cols 9%, Downloads
+  11%, Tags 24%); `.dataset-downloads` cells inherit the right-aligned
+  monospaced styling already used by `.dataset-rows` / `.dataset-cols`.
+  Inside the `@media (max-width: 767px)` block,
+  `.dataset-table tbody td.dataset-downloads` is set to `display: none`
+  so the mobile card layout is unchanged.
+- **`datasetapp/tests/test_views.py`**: new
+  `test_home_renders_downloads_column_with_per_dataset_counts` asserts
+  the column markers and the per-dataset count surface in the homepage
+  HTML; new `test_tag_view_does_not_double_count_downloads` locks the
+  `distinct=True` requirement against regressions where the M2M tag join
+  silently multiplies the Hit count.
+
 ## v1.6.4
 
 Bugfix for issue #86 — `pandas.read_csv("https://openmv.net/file/<slug>.csv")`

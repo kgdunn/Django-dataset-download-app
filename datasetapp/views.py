@@ -48,12 +48,26 @@ def healthz(request):
     return HttpResponse("ok\n", content_type="text/plain")
 
 
+def _annotate_with_downloads(queryset):
+    """Attach a ``num_downloads`` aggregate to each ``Dataset`` row.
+
+    ``distinct=True`` is required because callers may have already joined
+    the M2M ``tags`` relation (``display_by_tag``); without it the tag
+    join would multiply the Hit count by the number of matching tags.
+    """
+    return queryset.annotate(
+        num_downloads=Count("datafile__hit", distinct=True),
+    )
+
+
 def display_by_tag(request, tag):
     """
     Shows only the datasets with the given tag
     """
     log_file.debug("Tag view for tag=%s" % tag)
-    dataset_list = Dataset.objects.filter(tags__name__startswith=tag)
+    dataset_list = _annotate_with_downloads(
+        Dataset.objects.filter(tags__name__startswith=tag)
+    )
 
     context = {
         "dataset_list": dataset_list,
@@ -69,7 +83,7 @@ def display_all(request):
     """
     Displays all datasets in a table form, with brief summaries.
     """
-    dataset_list = Dataset.objects.order_by("slug")[:]
+    dataset_list = _annotate_with_downloads(Dataset.objects.order_by("slug"))[:]
     context = {"dataset_list": dataset_list}
     return TemplateResponse(request, "datasetapp/all_datasets.html", context)
 

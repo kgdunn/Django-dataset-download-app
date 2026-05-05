@@ -340,12 +340,14 @@ p  { margin: 0 0 var(--sp-3) 0; }
 .dataset-table tbody tr:last-child td { border-bottom: 0; }
 .dataset-table tbody tr:hover { background: var(--color-surface-2); }
 .dataset-table tbody td:first-child a { font-weight: 500; }
-.dataset-table .col-name { width: 19%; }
-.dataset-table .col-rows { width: 9%; }
-.dataset-table .col-cols { width: 10%; }
-.dataset-table .col-tags { width: 26%; }
+.dataset-table .col-name { width: 17%; }
+.dataset-table .col-rows { width: 8%; }
+.dataset-table .col-cols { width: 9%; }
+.dataset-table .col-downloads { width: 11%; }
+.dataset-table .col-tags { width: 24%; }
 .dataset-table tbody td.dataset-rows,
-.dataset-table tbody td.dataset-cols {
+.dataset-table tbody td.dataset-cols,
+.dataset-table tbody td.dataset-downloads {
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
     text-align: right; color: var(--color-text-muted);
 }
@@ -382,6 +384,7 @@ p  { margin: 0 0 var(--sp-3) 0; }
     .dataset-table tbody td.dataset-cols {
         display: inline-block; margin-right: var(--sp-4); text-align: left;
     }
+    .dataset-table tbody td.dataset-downloads { display: none; }
 }
 
 /* Tag-filter intro card */

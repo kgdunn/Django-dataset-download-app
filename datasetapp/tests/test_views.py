@@ -58,6 +58,47 @@ def test_home_returns_200(client, dataset):
     assert response.status_code == 200
 
 
+def test_home_renders_downloads_column_with_per_dataset_counts(
+    client, dataset, csv_file
+):
+    Hit.objects.create(dataset_hit=csv_file)
+    Hit.objects.create(dataset_hit=csv_file)
+    response = client.get(reverse("datasetapp:dataset-home-page"))
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert 'data-sort-key="downloads"' in body
+    assert 'class="dataset-downloads"' in body
+    assert 'data-sort-value="2"' in body
+
+
+def test_tag_view_does_not_double_count_downloads(client, db):
+    ds = Dataset.objects.create(
+        name="Multi",
+        slug="multi",
+        description="d",
+        author_name="a",
+        usage_restrictions="None",
+        data_source="s",
+    )
+    df = DataFile.objects.create(
+        file_type="CSV", link_to_file="datasets/multi.csv", dataset=ds
+    )
+    # Two tags both starting with "chem" would otherwise multiply the Hit
+    # count via the M2M join in display_by_tag.
+    for tag_name in ("chem", "chemistry"):
+        t = Tag.objects.create(name=tag_name, description="x")
+        ds.tags.add(t)
+    Hit.objects.create(dataset_hit=df)
+    Hit.objects.create(dataset_hit=df)
+    Hit.objects.create(dataset_hit=df)
+
+    response = client.get(reverse("datasetapp:dataset-by-tag", args=["chem"]))
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert 'data-sort-value="3"' in body
+    assert 'data-sort-value="6"' not in body
+
+
 def test_about_known_slug_returns_200(client, dataset, csv_file):
     response = client.get(
         reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])

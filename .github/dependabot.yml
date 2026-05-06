@@ -1,0 +1,19 @@
+# Dependabot config — weekly bumps for SHA-pinned third-party actions and
+# digest-pinned Docker base images. The pins themselves live in:
+#   .github/workflows/ci.yml      (actions/checkout, astral-sh/setup-uv,
+#                                  postgres:16-alpine service container)
+#   .github/workflows/release.yml (actions/checkout)
+#   Dockerfile                    (python:3.11-slim, both stages)
+#   docker-compose.prod.yml       (postgres:16-alpine)
+# CI catches breakage before merge.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"

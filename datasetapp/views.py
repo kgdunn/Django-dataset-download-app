@@ -18,7 +18,7 @@ import re
 
 # Django imports
 from django.core.cache import cache
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from django.http import FileResponse, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -37,6 +37,32 @@ log_file = logging.getLogger("datasetapp")
 # ValueError on a missing/extra dot, which surfaced as a 500 and noise in the
 # logs.
 _DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3}$")
+
+# Homepage free-text search (issue #94). ``icontains`` keeps SQLite dev and
+# Postgres prod in lock-step; the catalogue is small enough that a six-field
+# OR-of-LIKEs is cheaper than the migration + dev/CI divergence Postgres FTS
+# would impose.
+_SEARCH_FIELDS = (
+    "name",
+    "description",
+    "data_source",
+    "author_name",
+    "tags__name",
+    "tags__description",
+)
+_SEARCH_MAX_LEN = 100
+_SEARCH_MAX_TOKENS = 8
+
+
+def _search_filter(query):
+    """Build a ``Q`` that ANDs whitespace tokens, ORed across each text field."""
+    q = Q()
+    for token in query.split()[:_SEARCH_MAX_TOKENS]:
+        per_token = Q()
+        for field in _SEARCH_FIELDS:
+            per_token |= Q(**{f"{field}__icontains": token})
+        q &= per_token
+    return q
 
 
 @never_cache
@@ -81,10 +107,24 @@ def display_by_tag(request, tag):
 
 def display_all(request):
     """
-    Displays all datasets in a table form, with brief summaries.
+    Displays all datasets in a table form, with brief summaries. An optional
+    ``?q=<terms>`` query string filters the list by substring across the
+    dataset name, description, data source, author name, and tag name /
+    description; whitespace splits the query into tokens that must all match.
     """
-    dataset_list = _annotate_with_downloads(Dataset.objects.order_by("slug"))[:]
-    context = {"dataset_list": dataset_list}
+    raw = (request.GET.get("q") or "").strip()[:_SEARCH_MAX_LEN]
+    qs = Dataset.objects.order_by("slug")
+    if raw:
+        # ``.distinct()`` collapses duplicate rows produced by the M2M tag
+        # join; it must be applied before ``_annotate_with_downloads`` so
+        # the ``Count(distinct=True)`` aggregate sees a deduped row set.
+        qs = qs.filter(_search_filter(raw)).distinct()
+    dataset_list = _annotate_with_downloads(qs)[:]
+    context = {
+        "dataset_list": dataset_list,
+        "query": raw,
+        "result_count": len(dataset_list) if raw else None,
+    }
     return TemplateResponse(request, "datasetapp/all_datasets.html", context)
 
 

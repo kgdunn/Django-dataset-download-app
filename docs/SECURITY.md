@@ -87,26 +87,67 @@ In the Cloudflare dashboard for `openmv.net`:
 1. **Security → WAF → Custom rules** → "Create rule":
    - Field: `URI Path`, Operator: `starts with`, Value: `/admin/`
    - Action: `Managed Challenge`
-2. **Security → Bots** → enable "Bot Fight Mode" (free tier is sufficient).
-3. **Caching → Page Rules** → "URL: `*openmv.net/admin/*`" → Cache Level: Bypass.
+2. **Caching → Page Rules** → "URL: `*openmv.net/admin/*`" → Cache Level: Bypass.
+
+(Earlier revisions of this doc also recommended enabling Bot Fight Mode
+here, but BFM has been left **off** site-wide — see the next subsection
+for why.)
 
 `test.openmv.net` is DNS-only (grey cloud) so these rules don't apply
 there — Caddy is the only filter for staging.
 
 #### Bot Fight Mode and dataset downloads
 
-Bot Fight Mode flags non-browser User-Agents (`Python-urllib/3.X`,
-`python-requests/...`, etc.) and can return 403 to legitimate Python
-clients hitting dataset URLs (issue #86). Until v1.6.4 the public
-download path also redirected through `/media/datasets/...`, so a
-single `pandas.read_csv("https://openmv.net/file/<slug>.csv")` was
-evaluated by Cloudflare twice on two different paths. Since v1.6.4
-the `/file/*` view streams the bytes directly via `FileResponse`, so
-only `/file/*` is in the path of legitimate Python downloads. If Bot
-Fight Mode starts blocking that surface too, add a Custom Rule with
-**Field**: `URI Path`, **Operator**: `starts with`, **Value**:
-`/file/`, **Action**: `Skip` → "All remaining custom rules" + "Bot
-Fight Mode".
+Bot Fight Mode (BFM) flags non-browser User-Agents (`Python-urllib/3.X`,
+`python-requests/...`, etc.) from datacenter ASNs and returns 403 to
+legitimate Python clients hitting dataset URLs (issues #86, #95). Until
+v1.6.4 the public download path also redirected through
+`/media/datasets/...`, so a single
+`pandas.read_csv("https://openmv.net/file/<slug>.csv")` was evaluated by
+Cloudflare twice on two different paths; since v1.6.4 the `/file/*` view
+streams the bytes directly via `FileResponse`, so only `/file/*` is in
+the path of legitimate Python downloads.
+
+That origin-side change wasn't enough on its own — BFM still 403'd
+`pandas.read_csv` from AWS hosts and CI runners (issue #95). The
+**current production configuration** is two pure-Cloudflare changes:
+
+1. **Security → Bots → Bot Fight Mode → Off** (site-wide). On the Free
+   plan, BFM is on/off site-wide and **cannot** be skipped per-path by
+   WAF Custom Rules or Configuration Rules — the
+   "Skip → Bot Fight Mode" action only applies to **Super** Bot Fight
+   Mode (Pro+). For a public read-only dataset catalogue with no login
+   or write surface, BFM's protection is marginal compared with the
+   cost of silently breaking every `pd.read_csv` call from a CI
+   pipeline, so it is left off. If the zone is ever upgraded to Pro,
+   replace this with a WAF Custom Rule that `Skip`s
+   "All Super Bot Fight Mode rules" on `URI Path starts_with /file/`.
+2. **Rules → Overview → Configuration Rules → Create rule**:
+   - **When**: `(starts_with(http.request.uri.path, "/file/"))`
+   - **Then**: `Browser Integrity Check → Off`
+   - (The legacy `Security Level → Essentially Off` setting is no
+     longer surfaced in the Configuration Rule editor — Cloudflare
+     retired the per-zone Security Level dial in late 2024, so don't
+     go looking for it.)
+
+Verify from a datacenter IP (an AWS box, a GitHub Actions runner) with:
+
+```bash
+curl -sS -D - -A 'Python-urllib/3.12' -o /dev/null https://openmv.net/file/ammonia.csv
+```
+
+Expect `HTTP/2 200`. The same two-step configuration is what closed
+issue #95.
+
+**Trade-offs to know**: turning BFM off lets all UAs reach origin, so
+log volume on `/file/*` rises. Caddy + gunicorn handle this fine
+today; if it ever becomes a problem, an edge **Cache Rule** on
+`URI Path starts_with /file/` (Edge TTL 1 day) would absorb most of
+the traffic. The cost is that cache hits don't reach Django, so the
+per-dataset `Hit` counter that powers the homepage `Downloads` column
+and the detail-page sparkline (`_annotate_with_downloads` and
+`_download_series` in `datasetapp/views.py`) would under-count by the
+edge hit rate. Keep that in mind before adding the cache rule.
 
 ### fail2ban jail (alternative to caddy-ratelimit)
 

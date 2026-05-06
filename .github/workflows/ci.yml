@@ -14,7 +14,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # Pinned by digest so the CI Postgres byte-matches the prod stack
+        # (docker-compose.prod.yml). Bumped by Dependabot (`docker` ecosystem).
+        image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
         env:
           POSTGRES_DB: openmv
           POSTGRES_USER: openmv
@@ -28,14 +30,13 @@ jobs:
           --health-retries 5
 
     steps:
-      # TODO(security): swap the floating tags below for full commit SHAs
-      # (docs/SECURITY.md → "Issues to file" → action-SHA-pinning) once the
-      # maintainer confirms the SHAs. Tags can be re-pointed by the action
-      # owner; SHAs cannot.
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned by full commit SHA (immutable) rather
+      # than by floating tag (re-pointable by the action owner). Dependabot
+      # bumps these via `.github/dependabot.yml` (`github-actions` ecosystem).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           enable-cache: true
 

@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- builder ------------------------------------------------------------
-FROM python:3.11-slim AS builder
+# Pinned by digest so two builds five minutes apart can't end up on different
+# python:3.11-slim contents. Dependabot (`docker` ecosystem in
+# .github/dependabot.yml) opens weekly bump PRs; CI catches breakage before
+# merge. Bump in lockstep with the runtime stage below — the multi-stage
+# build expects identical glibc / libpq versions in both.
+FROM python:3.11-slim@sha256:6d85378d88a19cd4d76079817532d62232be95757cb45945a99fec8e8084b9c2 AS builder
 
 # Pinned to a specific uv version so a malicious push to ghcr.io/astral-sh/uv
 # can't land in our build. Bump in lockstep with `uv self update`.
@@ -17,7 +22,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 # ---- runtime ------------------------------------------------------------
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim@sha256:6d85378d88a19cd4d76079817532d62232be95757cb45945a99fec8e8084b9c2 AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq5 curl \

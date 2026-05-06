@@ -1,5 +1,45 @@
 # Releases
 
+## v1.8.1
+
+Supply-chain hardening for issues #79 (Issue J) and #77 (Issue H) —
+every third-party GitHub Action and Docker base image is now pinned by
+immutable identifier (40-char commit SHA / `@sha256:` digest) instead of
+a floating tag the upstream owner can re-point. No runtime behaviour
+change, no schema change, no template change.
+
+- **`.github/workflows/ci.yml`**: `actions/checkout@v4` →
+  `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1`;
+  `astral-sh/setup-uv@v6` →
+  `astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0`.
+  The `TODO(security): swap the floating tags below for full commit
+  SHAs` block is removed (the work it described is now done) and
+  replaced with a one-paragraph rationale comment pointing at
+  Dependabot. The Postgres service container's `image: postgres:16-alpine`
+  is digest-pinned to the same SHA used in `docker-compose.prod.yml` so
+  CI's database byte-matches prod's.
+- **`.github/workflows/release.yml`**: `actions/checkout@v4` pinned to
+  the same SHA / version comment as in `ci.yml`.
+- **`.github/workflows/deploy.yml`**: unchanged — uses zero third-party
+  actions (only an SSH session to a forced-command key).
+- **`Dockerfile`**: both stages of the multi-stage build pinned to
+  `python:3.11-slim@sha256:6d85378d88a19cd4d76079817532d62232be95757cb45945a99fec8e8084b9c2`
+  (the multi-arch manifest list digest, so amd64 / arm64 / arm builds
+  all resolve from the same parent). Comment styled after the existing
+  `ghcr.io/astral-sh/uv:0.8.17` rationale on line 8.
+- **`docker-compose.prod.yml`**: `postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50`.
+- **`.github/dependabot.yml`** (new): two ecosystems on a weekly
+  schedule — `github-actions` (covers Issue J / `ci.yml`+`release.yml`)
+  and `docker` (covers Issue H / `Dockerfile` + `docker-compose.prod.yml`).
+  Dependabot will open bump PRs as new SHAs / digests appear; CI
+  catches breakage before merge.
+- **`docs/SECURITY.md`**: finding 11 row updated from "Partially fixed
+  in v1.5.0" to "Fixed in v1.8.1"; Issue H and Issue J each gain a
+  `**Status:** **Fixed in v1.8.1** — …` entry mirroring the Issue I /
+  Issue K format already in the file.
+- **`pyproject.toml`** / **`RELEASES.md`**: PATCH bump (supply-chain
+  hygiene, no user-visible change), per the policy in `CLAUDE.md`.
+
 ## v1.8.0
 
 Adds a homepage free-text search bar (issue #94). The homepage view

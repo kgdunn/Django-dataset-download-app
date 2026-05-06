@@ -11,7 +11,10 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    # Pinned by digest so a Docker Hub repoint of postgres:16-alpine can't
+    # land silently on the next deploy. Dependabot (`docker` ecosystem in
+    # .github/dependabot.yml) opens weekly bump PRs.
+    image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: openmv-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

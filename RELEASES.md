@@ -1,5 +1,51 @@
 # Releases
 
+## v1.8.0
+
+Adds a homepage free-text search bar (issue #94). The homepage view
+(`/`) now honours an optional `?q=<terms>` query string and filters the
+dataset table by substring across six fields: dataset `name`,
+`description`, `data_source`, `author_name`, plus tag `name` and
+`description`. Whitespace splits the query into tokens that must all
+match (each token may match in any of the six fields). Empty or missing
+`q` returns the full table — pre-existing URLs and behaviour are
+unchanged.
+
+- **`datasetapp/views.py`**: `display_all` now reads `request.GET["q"]`,
+  builds a `Q` expression that ANDs whitespace tokens, ORed across the
+  six text fields with `icontains`, and applies `.distinct()` before
+  `_annotate_with_downloads` so the `Count(distinct=True)` aggregate
+  sees a deduped row set. `icontains` was chosen deliberately over
+  Postgres FTS (`SearchVector` / trigram) so SQLite dev, Postgres CI,
+  and Postgres prod stay in lock-step — the catalogue is small enough
+  that the cost is negligible. The query is silently truncated to
+  100 characters and 8 tokens to bound the worst case.
+- **`datasetapp/templates/datasetapp/all_datasets.html`**: renders a
+  `<form method="get" role="search">` with an `<input name="q">` and a
+  Submit button above the homepage intro paragraph; when a search is
+  active, also renders an "N results for …" summary, a "Clear" link
+  back to `/`, and a "No datasets matched" empty state when there are
+  no hits. The search bar is scoped to the homepage only — tag pages
+  (`/tag/<slug>`) are unchanged.
+- **`datasetapp/templates/datasetapp/base.html`**: small inline CSS
+  block for `.dataset-search`, `.dataset-search__summary`,
+  `.dataset-search__empty`, `.dataset-search__clear`, and
+  `.visually-hidden`, reusing the existing `--sp-*` / `--color-*` /
+  `--fs-*` variables. No new static file, no new dependency, no CSP
+  edits required (the CSP already allows a same-origin GET form).
+- **`datasetapp/tests/test_views.py`**: added six tests covering
+  substring match on `name`, on `description`, via a tag name, the
+  no-results empty state, a `.distinct()` regression guard for a
+  dataset whose two tags both match the query (mirrors
+  `test_tag_view_does_not_double_count_downloads`), and the intro
+  paragraph still rendering when no search is active.
+- **CLAUDE.md**: updated the `display_all` bullet under "Project
+  shape → Views" to mention the optional `?q=` search and the fields
+  covered.
+- No schema, migration, URL, settings, or admin changes — read path
+  only. Without `?q=` the homepage queryset, ordering, and download
+  annotation are byte-identical to v1.7.1.
+
 ## v1.7.1
 
 Docs-only patch for issue #95 — the v1.6.4 origin-side fix for

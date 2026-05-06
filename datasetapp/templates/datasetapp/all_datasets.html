@@ -12,12 +12,29 @@ Datasets{% endif %}{% endblock %}
     <p>{{current_tag_description}}</p>
 </div>
 {% else %}
+<form class="dataset-search" method="get" role="search" action="{% url 'datasetapp:dataset-home-page' %}">
+    <label for="dataset-search-input" class="visually-hidden">Search datasets</label>
+    <input type="search" id="dataset-search-input" name="q" value="{{ query|default:'' }}"
+           maxlength="100" placeholder="Search datasets" autocomplete="off">
+    <button type="submit" class="dataset-search__submit">Search</button>
+    {% if query %}
+    <a class="dataset-search__clear" href="{% url 'datasetapp:dataset-home-page' %}">Clear</a>
+    {% endif %}
+</form>
+{% if query %}
+<p class="dataset-search__summary">{{ result_count }} result{{ result_count|pluralize }} for &ldquo;{{ query }}&rdquo;.</p>
+{% if result_count == 0 %}
+<p class="dataset-search__empty">No datasets matched your search.
+    <a href="{% url 'datasetapp:dataset-home-page' %}">Show all datasets</a>.</p>
+{% endif %}
+{% else %}
 <div id="special_message">
     <p>You are generally free to use these datasets in any way you like. Please
     click on the dataset name to find out more information about it.
     <p>All data sets are used in the book
     <a href="http://learnche.org/pid">"Process Improvement using Data"</a>
 </div>
+{% endif %}
 {% endif %}
 
 <div class="dataset-results">

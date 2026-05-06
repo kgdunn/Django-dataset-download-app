@@ -99,6 +99,81 @@ def test_tag_view_does_not_double_count_downloads(client, db):
     assert 'data-sort-value="6"' not in body
 
 
+def _make_dataset(slug, name, description="d", data_source="s", author_name="a"):
+    return Dataset.objects.create(
+        name=name,
+        slug=slug,
+        description=description,
+        author_name=author_name,
+        usage_restrictions="None",
+        data_source=data_source,
+    )
+
+
+def test_home_search_matches_substring_in_name(client, db):
+    _make_dataset("iris", "Iris")
+    _make_dataset("cheese", "Cheddar Cheese")
+    response = client.get(reverse("datasetapp:dataset-home-page"), {"q": "iri"})
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert ">Iris</a>" in body
+    assert ">Cheddar Cheese</a>" not in body
+    assert "1 result for" in body
+
+
+def test_home_search_matches_substring_in_description(client, db):
+    _make_dataset("alpha", "Alpha", description="Contains XYZUNIQUE marker.")
+    _make_dataset("beta", "Beta", description="Different content.")
+    response = client.get(reverse("datasetapp:dataset-home-page"), {"q": "xyzunique"})
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert ">Alpha</a>" in body
+    assert ">Beta</a>" not in body
+
+
+def test_home_search_matches_via_tag_name(client, db):
+    tagged = _make_dataset("tagged", "Tagged")
+    untagged = _make_dataset("untagged", "Untagged")  # noqa: F841
+    t = Tag.objects.create(name="chemistry", description="Chemistry datasets")
+    tagged.tags.add(t)
+    response = client.get(reverse("datasetapp:dataset-home-page"), {"q": "chem"})
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert ">Tagged</a>" in body
+    assert ">Untagged</a>" not in body
+
+
+def test_home_search_no_results_renders_empty_state(client, db):
+    _make_dataset("iris", "Iris")
+    response = client.get(
+        reverse("datasetapp:dataset-home-page"), {"q": "zzznotfoundzzz"}
+    )
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert "No datasets matched" in body
+    assert "0 results for" in body
+
+
+def test_home_search_does_not_double_count_via_tag_join(client, db):
+    ds = _make_dataset("multi", "Multi")
+    for tag_name in ("chem", "chemistry"):
+        t = Tag.objects.create(name=tag_name, description="x")
+        ds.tags.add(t)
+    response = client.get(reverse("datasetapp:dataset-home-page"), {"q": "chem"})
+    body = response.content.decode()
+    assert response.status_code == 200
+    # Without `.distinct()` the M2M tag join would produce two rows.
+    assert body.count('class="dataset-row"') == 1
+
+
+def test_home_without_search_renders_intro_message(client, dataset):
+    response = client.get(reverse("datasetapp:dataset-home-page"))
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert 'id="special_message"' in body
+    assert "result for" not in body
+
+
 def test_about_known_slug_returns_200(client, dataset, csv_file):
     response = client.get(
         reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])

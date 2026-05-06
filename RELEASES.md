@@ -1,5 +1,34 @@
 # Releases
 
+## v1.7.1
+
+Docs-only patch for issue #95 — the v1.6.4 origin-side fix for
+`HTTPError: HTTP Error 403: Forbidden` on
+`pandas.read_csv("https://openmv.net/file/<slug>.csv")` was necessary
+but not sufficient: Cloudflare's Bot Fight Mode (BFM) continued to 403
+the `Python-urllib/*` User-Agent from AWS / GitHub Actions ASNs even
+after `/file/*` stopped redirecting through `/media/*`. The actual cure
+turned out to be two pure-Cloudflare configuration changes (no code
+change, no client-side workaround needed). This release records what is
+now configured on the production zone.
+
+- **`docs/SECURITY.md`**: rewrote the "Bot Fight Mode and dataset
+  downloads" subsection to document the production configuration:
+  (1) BFM is **off** site-wide on the Free plan because BFM cannot be
+  skipped per-path by WAF Custom Rules or Configuration Rules on Free
+  — the "Skip" action only exempts **Super** BFM (Pro+); (2) a
+  Configuration Rule on `URI Path starts_with /file/` sets Browser
+  Integrity Check to Off. Added the `curl -A 'Python-urllib/3.12'`
+  verification command, the trade-offs of turning BFM off, and the
+  caveat that an edge Cache Rule on `/file/*` would under-count the
+  per-dataset `Hit` counter. Removed the previous (incorrect)
+  recommendation to use a WAF Custom Rule with
+  `Skip → "Bot Fight Mode"` on Free, and qualified the
+  `/admin/*` recommendations to no longer suggest enabling BFM.
+- No code, dependency, settings, CI, or deploy script changes — this
+  is a documentation-only release that records the operational state
+  of the Cloudflare zone after issue #95 was resolved.
+
 ## v1.7.0
 
 Feature for issue #92 — the homepage table (and the per-tag filter view at

@@ -1,5 +1,36 @@
 # Releases
 
+## v1.8.2
+
+Operational fix: pin the compose project name so the openmv stack
+isn't accidentally torn down by sibling stacks on the same Hetzner VPS.
+
+The literature.learnche.org stack lives at
+`/home/deploy/literature/repo/` and the openmv stack lives at
+`/home/deploy/openmv/repo/` — both checkout directories end in `repo/`,
+so without an explicit `name:` key in the compose files Compose
+defaults the project name to the parent directory's basename and
+both stacks resolve to project=`repo`. That made
+`docker compose -f docker-compose.prod.yml down` in *either* repo
+remove the *other* stack's containers (`openmv-app` +
+`openmv-postgres` were observed disappearing while operating on the
+literature stack).
+
+- **`docker-compose.yml`**, **`docker-compose.prod.yml`**: add a
+  top-level `name: openmv` directive (with a comment explaining the
+  collision the directive prevents). Scopes every Compose
+  invocation in this repo to the openmv project.
+- The companion fix lives in
+  `kgdunn/Django-app-Literature-database` (`name: literature` in its
+  two compose files); the two PRs together fully decouple the
+  stacks' teardown scopes.
+- No runtime behaviour change, no schema change, no template change
+  — `docker compose ps`, `up`, `down`, `restart` all keep working
+  with the existing service names (`web`, `db`) and container
+  names (`openmv-app`, `openmv-postgres`).
+- **`pyproject.toml`** / **`RELEASES.md`**: PATCH bump (operational
+  hygiene, no user-visible change), per the policy in `CLAUDE.md`.
+
 ## v1.8.1
 
 Supply-chain hardening for issues #79 (Issue J) and #77 (Issue H) —

@@ -9,6 +9,13 @@
 #   - openmv-app:      127.0.0.1:8001 -> 8000
 #   - openmv-postgres: 127.0.0.1:5434 -> 5432
 
+# Distinct project name keeps `docker compose down` from accidentally
+# tearing out a sibling stack on the same VPS that defaults to the same
+# project (compose's default project name is the parent directory's
+# basename — colocated `/home/deploy/<project>/repo/` checkouts all end
+# in `repo/` and would otherwise share one teardown scope).
+name: openmv
+
 services:
   db:
     # Pinned by digest so a Docker Hub repoint of postgres:16-alpine can't

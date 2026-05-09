@@ -1,5 +1,33 @@
 # Releases
 
+## v1.8.3
+
+Documentation: capture the on-disk volume implications of the
+v1.8.2 compose project-name pin, plus the migration playbook used
+to move the live Postgres data from the old project's volume to
+the new one.
+
+- **`CLAUDE.md`** — "Production deployment" section gets a new
+  bullet calling out `name: openmv` and the resulting volume name
+  (`openmv_openmv_postgres_data`); the Gotchas list gets a new
+  entry #11 with the full migration shape (stop/rm without `-v`,
+  `docker volume create`, `docker run --rm -v old:/from:ro
+  -v new:/to alpine cp -a /from/. /to/`, then bring the new stack
+  up). Bind mounts (`data/media`, `data/static`, `data/public`)
+  are explicitly noted as project-rename-immune because they're
+  addressed by host path.
+- The 2026-05-09 migration (`repo_openmv_postgres_data` →
+  `openmv_openmv_postgres_data`) is documented inline as a
+  worked example of when the playbook is needed.
+- **`pyproject.toml`** / **`RELEASES.md`**: PATCH bump (docs only,
+  no runtime / CI / template / dependency change), per the policy
+  in `CLAUDE.md`.
+- The matching deploy-doc update on the literature side
+  (`kgdunn/Django-app-Literature-database`) lives in
+  `docs/deploy.md` under the new "Compose project name and
+  on-disk volumes" section, with a cross-reference to this
+  migration as the worked example.
+
 ## v1.8.2
 
 Operational fix: pin the compose project name so the openmv stack

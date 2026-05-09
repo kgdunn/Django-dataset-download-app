@@ -162,14 +162,14 @@ _SPARKLINE_WEEKS = 7 * 52  # roughly seven years; issue #104
 
 
 def _download_series(dataset, weeks=_SPARKLINE_WEEKS):
-    """List of ``[yyyy-mm-dd, avg_per_day]`` pairs for the last ``weeks`` weeks.
+    """List of ``[yyyy-mm-dd, total_for_week]`` pairs for the last ``weeks`` weeks.
 
-    Each bucket is the average daily download count for that ISO week (anchored
-    on Monday); the series is zero-filled for weeks with no downloads. Weekly
-    smoothing makes a multi-year window legible — a daily series over seven
+    Each bucket is the total download count for that ISO week (anchored on
+    Monday); the series is zero-filled for weeks with no downloads. Weekly
+    aggregation makes a multi-year window legible — a daily series over seven
     years is a single noisy band at the resolution of a sparkline.
     """
-    cache_key = f"download_series:{dataset.pk}:weekly:{weeks}"
+    cache_key = f"download_series:{dataset.pk}:weekly_total:{weeks}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -195,9 +195,7 @@ def _download_series(dataset, weeks=_SPARKLINE_WEEKS):
     series = [
         [
             (start_week + datetime.timedelta(weeks=i)).isoformat(),
-            round(
-                counts_by_week.get(start_week + datetime.timedelta(weeks=i), 0) / 7, 4
-            ),
+            counts_by_week.get(start_week + datetime.timedelta(weeks=i), 0),
         ]
         for i in range(weeks)
     ]

@@ -312,6 +312,5 @@ def test_about_includes_download_series_for_sparkline(client, dataset, csv_file)
     # Seven years of weekly buckets (issue #104).
     assert len(series) == 7 * 52
     assert all(len(point) == 2 for point in series)
-    # One hit landed in the most recent week and is reported as the weekly
-    # average daily count (1 / 7 ≈ 0.1429).
-    assert sum(point[1] for point in series) == pytest.approx(1 / 7, abs=1e-4)
+    # One hit landed in the most recent week and is reported as a weekly total.
+    assert sum(point[1] for point in series) == 1

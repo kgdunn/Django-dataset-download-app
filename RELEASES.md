@@ -1,5 +1,31 @@
 # Releases
 
+## v1.9.1
+
+Follow-up to v1.9.0: the sparkline now plots the **total** number of
+downloads in each week, instead of the average daily download count
+(`weekly_count / 7`). Same seven-year window and weekly buckets — only
+the y-axis units change. Issue #104 follow-up.
+
+- **`datasetapp/views.py`** — `_download_series` no longer divides
+  the per-week count by 7; emits `[yyyy-mm-dd, total]` integer
+  pairs. Cache key bumped to
+  `download_series:<pk>:weekly_total:<weeks>` so any v1.9.0 entry
+  still warm in `django_cache_table` after deploy can't deliver the
+  old fractional values.
+- **`datasetapp/templates/datasetapp/dataset_info.html`** — tooltip
+  reverts to `Week of <Monday> / <N> download(s)` (singular when
+  `N === 1`), matching the integer values.
+- **`datasetapp/tests/test_views.py`**,
+  **`datasetapp/tests/test_security.py`** — assertions updated to
+  the integer-total shape (sum of values equals the number of `Hit`
+  rows recorded in the current week).
+- **`CLAUDE.md`** — Project shape entry now describes the sparkline
+  as "total weekly download count" with the v1.9.1 attribution.
+- **`pyproject.toml`** / **`RELEASES.md`**: PATCH bump (units-only
+  refinement of an existing visible widget; no URL or
+  template-structure change), per the policy in `CLAUDE.md`.
+
 ## v1.9.0
 
 Detail-page sparkline now spans seven years and smooths the noise out

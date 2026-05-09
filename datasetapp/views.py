@@ -19,7 +19,7 @@ import re
 # Django imports
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncWeek
 from django.http import FileResponse, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import reverse as django_reverse
@@ -158,34 +158,48 @@ def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
     return rows
 
 
-def _download_series(dataset, days=365):
-    """List of ``[yyyy-mm-dd, count]`` pairs for the last ``days`` days, zero-filled.
+_SPARKLINE_WEEKS = 7 * 52  # roughly seven years; issue #104
 
-    Cached for one hour per dataset: the table grows monotonically and the
-    aggregation walks the whole window on every call. Cache invalidates
-    naturally on the hour; a missed download won't appear in the sparkline
-    until then, which is fine for a 365-day chart.
+
+def _download_series(dataset, weeks=_SPARKLINE_WEEKS):
+    """List of ``[yyyy-mm-dd, avg_per_day]`` pairs for the last ``weeks`` weeks.
+
+    Each bucket is the average daily download count for that ISO week (anchored
+    on Monday); the series is zero-filled for weeks with no downloads. Weekly
+    smoothing makes a multi-year window legible — a daily series over seven
+    years is a single noisy band at the resolution of a sparkline.
     """
-    cache_key = f"download_series:{dataset.pk}:{days}"
+    cache_key = f"download_series:{dataset.pk}:weekly:{weeks}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     today = timezone.now().date()
-    start = today - datetime.timedelta(days=days - 1)
+    end_week = today - datetime.timedelta(days=today.weekday())
+    start_week = end_week - datetime.timedelta(weeks=weeks - 1)
     counts = (
-        Hit.objects.filter(dataset_hit__dataset=dataset, date_and_time__date__gte=start)
-        .annotate(day=TruncDate("date_and_time"))
-        .values("day")
+        Hit.objects.filter(
+            dataset_hit__dataset=dataset, date_and_time__date__gte=start_week
+        )
+        .annotate(week=TruncWeek("date_and_time"))
+        .values("week")
         .annotate(n=Count("id"))
     )
-    counts_by_day = {row["day"]: row["n"] for row in counts}
+    counts_by_week = {}
+    for row in counts:
+        wk = row["week"]
+        # TruncWeek returns a datetime; reduce to a date for keying.
+        if hasattr(wk, "date"):
+            wk = wk.date()
+        counts_by_week[wk] = row["n"]
     series = [
         [
-            (start + datetime.timedelta(days=i)).isoformat(),
-            counts_by_day.get(start + datetime.timedelta(days=i), 0),
+            (start_week + datetime.timedelta(weeks=i)).isoformat(),
+            round(
+                counts_by_week.get(start_week + datetime.timedelta(weeks=i), 0) / 7, 4
+            ),
         ]
-        for i in range(days)
+        for i in range(weeks)
     ]
     cache.set(cache_key, series, 60 * 60)
     return series

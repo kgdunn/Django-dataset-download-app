@@ -309,6 +309,9 @@ def test_about_includes_download_series_for_sparkline(client, dataset, csv_file)
     start = body.index(marker) + len(marker)
     end = body.index(";", start)
     series = json.loads(body[start:end])
-    assert len(series) == 365
+    # Seven years of weekly buckets (issue #104).
+    assert len(series) == 7 * 52
     assert all(len(point) == 2 for point in series)
-    assert sum(point[1] for point in series) == 1
+    # One hit landed in the most recent week and is reported as the weekly
+    # average daily count (1 / 7 ≈ 0.1429).
+    assert sum(point[1] for point in series) == pytest.approx(1 / 7, abs=1e-4)

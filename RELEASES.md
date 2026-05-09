@@ -1,5 +1,35 @@
 # Releases
 
+## v1.9.0
+
+Detail-page sparkline now spans seven years and smooths the noise out
+by switching from per-day download counts to per-week averages of the
+daily download count (issue #104).
+
+- **`datasetapp/views.py`** — `_download_series` aggregates `Hit` rows
+  with `TruncWeek("date_and_time")` (instead of `TruncDate`), keeps a
+  rolling window of `7 * 52` weekly buckets anchored on Monday, and
+  emits `[yyyy-mm-dd, avg_per_day]` pairs (`weekly_count / 7`,
+  rounded to 4 dp). The cache key was renamed to
+  `download_series:<pk>:weekly:<weeks>` so the new shape can't collide
+  with any pre-bump cached entry that's still warm in
+  `django_cache_table` after deploy.
+- **`datasetapp/templates/datasetapp/dataset_info.html`** — tooltip
+  now reads `Week of <Monday>` / `<value>.toFixed(2) downloads/day`,
+  matching the new bucket semantics. ECharts category x-axis still
+  hides labels, so the visible sparkline shape is unchanged apart
+  from being smoother and longer.
+- **`datasetapp/tests/test_views.py`** —
+  `test_about_includes_download_series_for_sparkline` updated to assert
+  the new shape (`len == 7 * 52`, sum of values ≈ `1 / 7` for one
+  recorded `Hit`).
+- **`CLAUDE.md`** — Project shape / Templates entries refreshed to
+  describe the seven-year weekly sparkline rather than the old
+  365-day daily one.
+- **`pyproject.toml`** / **`RELEASES.md`**: MINOR bump per the policy
+  in `CLAUDE.md` (visible behaviour change to a public-facing widget,
+  no URL or template-structure break).
+
 ## v1.8.3
 
 Documentation: capture the on-disk volume implications of the

@@ -259,10 +259,12 @@ def test_download_series_uses_cache(client, db):
     Hit.objects.create(dataset_hit=df)
     second = _download_series(ds)
     assert first == second
-    # After clearing the cache the new Hit should appear.
+    # After clearing the cache the new Hit should appear. Two hits in the
+    # current week amount to ``2 / 7`` once the daily-average aggregation
+    # kicks in (issue #104).
     cache.clear()
     third = _download_series(ds)
-    assert sum(point[1] for point in third) == 2
+    assert sum(point[1] for point in third) == pytest.approx(2 / 7, abs=1e-4)
 
 
 # ------------------------------------- special_message no longer in context --

@@ -51,7 +51,7 @@
                         textStyle: {color: readVar('--chart-tooltip-fg', '#0e1414')},
                         formatter: function(params) {
                             var p = params[0];
-                            return p.name + '<br/>' + p.value + ' download' + (p.value === 1 ? '' : 's');
+                            return 'Week of ' + p.name + '<br/>' + p.value.toFixed(2) + ' downloads/day';
                         }
                     },
                     series: [{

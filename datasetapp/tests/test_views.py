@@ -7,11 +7,13 @@ They deliberately do NOT assert page content beyond status codes — the goal
 is a CI tripwire for accidental view-level breakage, not template coverage.
 """
 
+import datetime
 import json
 from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from datasetapp.models import DataFile, Dataset, Hit, Tag
 
@@ -294,6 +296,35 @@ def test_healthz_does_not_record_a_hit(client, db):
     before = Hit.objects.count()
     client.get(reverse("datasetapp:healthz"))
     assert Hit.objects.count() == before
+
+
+def test_about_renders_download_meta_with_first_hit_month(client, dataset, csv_file):
+    # Two hits on different days; the earliest one drives the "since <Mon YYYY>"
+    # tail on the download counter. ``Hit.date_and_time`` has ``auto_now=True``,
+    # so we have to ``.update()`` the timestamp post-create to keep it from
+    # being clobbered.
+    earliest = timezone.make_aware(datetime.datetime(2020, 2, 14, 12, 0))
+    later = timezone.make_aware(datetime.datetime(2024, 7, 1, 9, 0))
+    h1 = Hit.objects.create(dataset_hit=csv_file)
+    h2 = Hit.objects.create(dataset_hit=csv_file)
+    Hit.objects.filter(pk=h1.pk).update(date_and_time=earliest)
+    Hit.objects.filter(pk=h2.pk).update(date_and_time=later)
+    response = client.get(
+        reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])
+    )
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert "2 downloads since Feb 2020" in body
+
+
+def test_about_omits_since_clause_when_no_hits(client, dataset, csv_file):
+    response = client.get(
+        reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])
+    )
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert "0 downloads" in body
+    assert "since" not in body.split('class="download-meta"')[1].split("</p>")[0]
 
 
 def test_about_includes_download_series_for_sparkline(client, dataset, csv_file):

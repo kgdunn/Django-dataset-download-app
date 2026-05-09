@@ -1,5 +1,33 @@
 # Releases
 
+## v1.10.0
+
+Detail-page download counter now reads `<N> downloads since <Mon YYYY>`,
+where the suffix is the month and year of the earliest `Hit` recorded
+for the dataset. The clause is omitted entirely when the dataset has
+never been downloaded — the counter just shows `0 downloads`.
+
+- **`datasetapp/views.py`** — `about_dataset` adds a `first_hit_at`
+  to the template context, sourced from the earliest
+  `Hit.date_and_time` filtered by the whole dataset (across every
+  associated `DataFile`, not just the first one). The query is one
+  extra row read per detail-page request — no aggregate, just an
+  `ORDER BY date_and_time LIMIT 1` against the existing
+  `(dataset_hit, date_and_time)` shape — so it doesn't need its own
+  cache layer the way the sparkline does.
+- **`datasetapp/templates/datasetapp/dataset_info.html`** —
+  `download-meta` paragraph appends `since {{ first_hit_at|date:"M Y" }}`
+  via Django's date filter when `first_hit_at` is truthy. No CSS or
+  layout change.
+- **`datasetapp/tests/test_views.py`** — adds two regressions:
+  `test_about_renders_download_meta_with_first_hit_month` (earliest
+  of two backdated hits drives the suffix) and
+  `test_about_omits_since_clause_when_no_hits` (no hits → no
+  `since` text).
+- **`pyproject.toml`** / **`RELEASES.md`**: MINOR bump per the policy
+  in `CLAUDE.md` (additive change to a public-facing widget; no URL
+  or template-structure break).
+
 ## v1.9.1
 
 Follow-up to v1.9.0: the sparkline now plots the **total** number of

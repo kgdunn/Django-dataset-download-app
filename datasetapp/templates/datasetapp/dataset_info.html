@@ -27,7 +27,7 @@
             Download <span class="download-cta__type">{{ dfile.file_type }}</span>
         </a>
         <p class="download-hint">(Right-click link; choose "<i>Save Link As</i>")</p>
-        <p class="download-meta">{{ num_hits }} download{{ num_hits|pluralize }}</p>
+        <p class="download-meta">{{ num_hits }} download{{ num_hits|pluralize }}{% if first_hit_at %} since {{ first_hit_at|date:"M Y" }}{% endif %}</p>
 
         {% if num_hits %}
         <div id="downloads-sparkline"></div>

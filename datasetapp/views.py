@@ -250,6 +250,12 @@ def about_dataset(request, dataset_name=None):
         "dfile": dfile,
         "download_file_name": download_file_name,
         "num_hits": Hit.objects.filter(dataset_hit=dfile).count(),
+        "first_hit_at": (
+            Hit.objects.filter(dataset_hit__dataset=ds)
+            .order_by("date_and_time")
+            .values_list("date_and_time", flat=True)
+            .first()
+        ),
         "prev_dataset": prev_dataset,
         "next_dataset": next_dataset,
         "preview_rows": preview_rows,

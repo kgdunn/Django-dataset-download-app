@@ -23,7 +23,7 @@
 #
 # Required env (sourced from the same .env the prod stack uses):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
-#   BACKUP_S3_BUCKET                  e.g. openmv-backups
+#   BACKUP_S3_BUCKET                  e.g. kgd-backups (shared with literature)
 #   BACKUP_S3_PREFIX                  optional, defaults to "openmv"
 #   POSTGRES_DB, POSTGRES_USER        already present for the prod stack
 #

@@ -59,16 +59,18 @@ Before starting:
 
 ## Part 1: AWS one-time setup
 
-Do this in the AWS console. Values in `<angle brackets>` are yours to
-choose.
+If `kgd-backups` already exists from the literature stack, skip 1a (the
+bucket is shared). You still need a **new IAM user** with an
+openmv-scoped policy in step 1b — never reuse literature's IAM
+credentials.
 
-### 1a. Create the bucket
+### 1a. Bucket (skip if already created for literature)
 
 S3 → Create bucket:
 
 | Field                       | Value                                              |
 | --------------------------- | -------------------------------------------------- |
-| Bucket name                 | `<openmv-backups>` (must be globally unique)       |
+| Bucket name                 | `kgd-backups` (must be globally unique; reuse the existing one if it already exists) |
 | Region                      | `eu-central-1` (Frankfurt — close to Hetzner Nuremberg) |
 | Block all public access     | Leave on (default)                                 |
 | Bucket versioning           | **Enable** (guards against bad sync overwriting good data) |
@@ -80,13 +82,13 @@ S3 → Create bucket:
 
 IAM → Users → Create user:
 
-- User name: `openmv-backup`
+- User name: `openmv-backup` (separate from `literature-backup`)
 - **Do not** check "Provide user access to the AWS Management Console" —
   programmatic only.
 
 After creation, on the user's **Permissions** tab, "Add permissions" →
 "Attach policies directly" → "Create policy" (inline). Paste this,
-replacing `openmv-backups` with your bucket name:
+replacing `kgd-backups` with your bucket name if different:
 
 ```json
 {
@@ -96,7 +98,7 @@ replacing `openmv-backups` with your bucket name:
       "Sid": "ListBucketUnderPrefix",
       "Effect": "Allow",
       "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::openmv-backups",
+      "Resource": "arn:aws:s3:::kgd-backups",
       "Condition": {
         "StringLike": { "s3:prefix": ["openmv", "openmv/*"] }
       }
@@ -109,7 +111,7 @@ replacing `openmv-backups` with your bucket name:
         "s3:PutObject",
         "s3:DeleteObject"
       ],
-      "Resource": "arn:aws:s3:::openmv-backups/openmv/*"
+      "Resource": "arn:aws:s3:::kgd-backups/openmv/*"
     }
   ]
 }
@@ -117,7 +119,8 @@ replacing `openmv-backups` with your bucket name:
 
 Name it `openmv-backup-policy`. This grants exactly what the script needs
 and nothing else: list under `openmv/`, read/write/delete objects under
-`openmv/`. No access to other buckets, no IAM, no console.
+`openmv/`. **No access to the `literature/` prefix in the same bucket**,
+no IAM, no console.
 
 ### 1c. Generate access keys
 
@@ -134,6 +137,9 @@ You'll paste both into Hetzner's `.env` in step 2b.
 SSH in as `deploy` (or `sudo -iu deploy`).
 
 ### 2a. Install the AWS CLI v2
+
+If literature's backup is already running on this box, `aws` is already
+installed — skip 2a. Otherwise:
 
 Ubuntu 24.04 dropped the `awscli` apt package, so `sudo apt install
 awscli` no longer works. Two supported alternatives — pick whichever
@@ -181,7 +187,7 @@ chosen bucket name):
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 AWS_DEFAULT_REGION=eu-central-1
-BACKUP_S3_BUCKET=openmv-backups
+BACKUP_S3_BUCKET=kgd-backups
 BACKUP_S3_PREFIX=openmv
 ```
 
@@ -206,7 +212,7 @@ cd /home/deploy/openmv/repo
 Expected output (timestamps will differ):
 
 ```
-[backup-openmv] 2026-05-04T... starting; bucket=openmv-backups prefix=openmv
+[backup-openmv] 2026-05-04T... starting; bucket=kgd-backups prefix=openmv
 [backup-openmv] 2026-05-04T... db dumped: 12M
 [backup-openmv] 2026-05-04T... uploaded daily dump
 [backup-openmv] 2026-05-04T... media synced
@@ -227,9 +233,9 @@ From the same shell (or your laptop with `aws` configured against the
 same access key, or the AWS console):
 
 ```bash
-aws s3 ls s3://openmv-backups/openmv/db/daily/
-aws s3 ls s3://openmv-backups/openmv/media/  | head
-aws s3 ls s3://openmv-backups/openmv/public/
+aws s3 ls s3://kgd-backups/openmv/db/daily/
+aws s3 ls s3://kgd-backups/openmv/media/  | head
+aws s3 ls s3://kgd-backups/openmv/public/
 ```
 
 You should see today's `db_openmv-YYYY-MM-DD.sql.gz`, plus all the
@@ -268,7 +274,7 @@ After the first scheduled run (the next morning):
 
 ```bash
 tail -n 20 /home/deploy/openmv/backups/backup.log
-aws s3 ls s3://openmv-backups/openmv/db/daily/
+aws s3 ls s3://kgd-backups/openmv/db/daily/
 ```
 
 You should see two `db_openmv-*.sql.gz` files (today's + yesterday's).
@@ -292,7 +298,7 @@ docker run --rm -d --name openmv-restore-test \
 sleep 5
 
 # Pull the most recent daily and restore into it
-aws s3 cp s3://openmv-backups/openmv/db/daily/db_openmv-$(date -u +%F).sql.gz - \
+aws s3 cp s3://kgd-backups/openmv/db/daily/db_openmv-$(date -u +%F).sql.gz - \
   | gunzip \
   | docker exec -i openmv-restore-test psql -U openmv -d openmv
 
@@ -322,8 +328,8 @@ catastrophic admin error), the path is:
 
    ```bash
    cd /home/deploy/openmv/repo
-   aws s3 sync s3://openmv-backups/openmv/media/ data/media/
-   aws s3 sync s3://openmv-backups/openmv/public/ data/public/
+   aws s3 sync s3://kgd-backups/openmv/media/ data/media/
+   aws s3 sync s3://kgd-backups/openmv/public/ data/public/
    ```
 
    `--delete` is deliberately omitted — if S3 has anything the local
@@ -340,7 +346,7 @@ catastrophic admin error), the path is:
    `yearly/` instead:
 
    ```bash
-   aws s3 cp s3://openmv-backups/openmv/db/daily/db_openmv-YYYY-MM-DD.sql.gz - \
+   aws s3 cp s3://kgd-backups/openmv/db/daily/db_openmv-YYYY-MM-DD.sql.gz - \
      | gunzip \
      | docker compose -f docker-compose.prod.yml exec -T db \
          psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
@@ -368,8 +374,8 @@ and `AWS_SECRET_ACCESS_KEY` and that the file is readable by `deploy`
 
 **`AccessDenied` on a `PutObject` / `s3 cp`** — the IAM policy in step 1b
 must use the **exact** bucket name and prefix. A common mistake: writing
-`openmv-backups/openmv` in the resource ARN where you should write
-`openmv-backups/openmv/*` (the trailing `/*` is what permits objects
+`kgd-backups/openmv` in the resource ARN where you should write
+`kgd-backups/openmv/*` (the trailing `/*` is what permits objects
 under the prefix, not the prefix itself).
 
 **`pg_dump: error: connection to server failed`** — the `db` container

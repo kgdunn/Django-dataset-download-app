@@ -129,13 +129,15 @@ keys it needs on top of the existing `POSTGRES_*` set:
 AWS_ACCESS_KEY_ID=…
 AWS_SECRET_ACCESS_KEY=…
 AWS_DEFAULT_REGION=eu-central-1
-BACKUP_S3_BUCKET=openmv-backups
+BACKUP_S3_BUCKET=kgd-backups
 BACKUP_S3_PREFIX=openmv
 ```
 
 The IAM principal those keys belong to should be scoped to `s3:PutObject`,
 `s3:GetObject`, `s3:DeleteObject`, and `s3:ListBucket` on
 `arn:aws:s3:::$BACKUP_S3_BUCKET/$BACKUP_S3_PREFIX/*` only — nothing else.
+The bucket is shared with the literature stack via prefix isolation, so a
+leak in either stack's IAM credentials cannot reach the other's data.
 Enable bucket versioning + SSE-S3 (default since Jan 2023) when creating
 the bucket.
 

@@ -1,5 +1,36 @@
 # Releases
 
+## v1.10.1
+
+Documentation: rename the off-host backup S3 bucket from `openmv-backups`
+to `kgd-backups` in docs and the `bin/backup-openmv.sh` header comment,
+reflecting the actual shared-bucket name used in production. The bucket
+itself was renamed when the live backup setup was wired up on the Hetzner
+host on 2026-05-10; this PR brings the docs in sync. The script reads
+the bucket name from `$BACKUP_S3_BUCKET` in `.env`, so no runtime / CI /
+template / dependency change.
+
+- **`docs/backup.md`** — every reference to `openmv-backups` (intro
+  paragraph, S3 layout block, IAM policy ARNs in 1b, `.env` example
+  block, verify / restore commands, real-disaster-recovery commands,
+  troubleshooting) updated to `kgd-backups`. Part 1's bucket-creation
+  section also gains a "skip if already created for literature" note
+  that mirrors the symmetric pattern in the literature stack's runbook
+  (`kgdunn/Django-app-Literature-database` `docs/backup.md`).
+- **`CLAUDE.md`** — Backups-section `BACKUP_S3_BUCKET=` example
+  updated, and a sentence added noting the bucket is shared with the
+  literature stack via prefix isolation (so a leak in either stack's
+  IAM credentials cannot reach the other's data).
+- **`bin/backup-openmv.sh`** — header comment example for
+  `BACKUP_S3_BUCKET` updated. Runtime behaviour unchanged; the script
+  reads the bucket name from `.env`.
+- **`pyproject.toml`** / **`RELEASES.md`**: PATCH bump (docs +
+  comment, no user-visible behaviour change), per the policy in
+  `CLAUDE.md`.
+- The matching docs rename in the literature stack
+  (`kgdunn/Django-app-Literature-database`) shipped as a sibling PR
+  on the same branch name (#101 there, merged 2026-05-10).
+
 ## v1.10.0
 
 Detail-page download counter now reads `<N> downloads since <Mon YYYY>`,

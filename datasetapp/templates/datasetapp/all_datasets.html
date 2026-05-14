@@ -12,7 +12,7 @@ Datasets{% endif %}{% endblock %}
     <p>{{current_tag_description}}</p>
 </div>
 {% else %}
-<form class="dataset-search" method="get" role="search" action="{% url 'datasetapp:dataset-home-page' %}">
+<form class="dataset-search dataset-search--hero" method="get" role="search" action="{% url 'datasetapp:dataset-home-page' %}">
     <label for="dataset-search-input" class="visually-hidden">Search datasets</label>
     <input type="search" id="dataset-search-input" name="q" value="{{ query|default:'' }}"
            maxlength="100" placeholder="Search datasets" autocomplete="off">

@@ -3,7 +3,19 @@
 
 {% block title %}{{ ds.name }}-OpenMV.net Datasets{% endblock %}
 {% block body %}
-<p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
+<nav class="detail-topbar" aria-label="Dataset navigation">
+    {% if prev_dataset %}
+    <a class="detail-topbar__btn detail-topbar__btn--prev" href="{% url 'datasetapp:dataset-about-a-dataset' prev_dataset.slug %}" rel="prev">&larr; Previous</a>
+    {% else %}
+    <span class="detail-topbar__spacer" aria-hidden="true"></span>
+    {% endif %}
+    <a class="detail-topbar__btn detail-topbar__btn--home" href="{% url 'datasetapp:dataset-home-page' %}">Back to home</a>
+    {% if next_dataset %}
+    <a class="detail-topbar__btn detail-topbar__btn--next" href="{% url 'datasetapp:dataset-about-a-dataset' next_dataset.slug %}" rel="next">Next &rarr;</a>
+    {% else %}
+    <span class="detail-topbar__spacer" aria-hidden="true"></span>
+    {% endif %}
+</nav>
 
 <div class="detail-title">
     <h3>{{ ds.name }}</h3>
@@ -214,12 +226,4 @@ df.describe()</code></pre>
 })();
 </script>
 
-<nav class="detail-nav">
-    {% if prev_dataset %}
-        <span class="nav-prev">&larr; <a href="{% url 'datasetapp:dataset-about-a-dataset' prev_dataset.slug %}">{{ prev_dataset.name }}</a></span>
-    {% endif %}
-    {% if next_dataset %}
-        <span class="nav-next"><a href="{% url 'datasetapp:dataset-about-a-dataset' next_dataset.slug %}">{{ next_dataset.name }}</a> &rarr;</span>
-    {% endif %}
-</nav>
 {% endblock %}

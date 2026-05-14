@@ -1,5 +1,32 @@
 # Releases
 
+## v1.12.0
+
+Visual refresh: swap the teal palette for the sister literature site's
+"Oxford navy" palette, and bring the dataset detail page's navigation in
+line with literature's design — a single top-of-page topbar with three
+chip buttons (Previous / Back to home / Next) on a 1fr-auto-1fr grid, so
+the centre "home" chip stays anchored even when prev or next is missing.
+
+- **`datasetapp/templates/datasetapp/base.html`** — replace the teal
+  light- and dark-mode `--color-*` tokens with the literature site's
+  Oxford navy values (`#1f4e7a` / `#7ea2c4` accent), retarget
+  `--chart-line` and `--chart-area` to the same navy, and restyle
+  `.detail-topbar` from a single text link into a three-column chip
+  grid (`.detail-topbar__btn` chips in `--color-accent-soft`, hover to
+  `--color-accent`, plus a `.detail-topbar__spacer` cell for when one
+  side is absent so "home" stays centred). The legacy bottom `.detail-nav`
+  block is removed — prev/next have moved up into the topbar.
+- **`datasetapp/templates/datasetapp/dataset_info.html`** — top-of-page
+  topbar now renders three chips (Previous / Back to home / Next), with
+  `__spacer` placeholders when `prev_dataset` / `next_dataset` are
+  missing. Bottom `<nav class="detail-nav">` is removed.
+
+No behaviour, URL, model, or view changes — purely visual + template
+markup. Tag chips, search bar, download CTA, sparkline, share button,
+quickstart copy button, and table styling all pick up the new accent
+through existing CSS variable references.
+
 ## v1.11.0
 
 Dataset detail page (`/info/<slug>`) now has a **Share** button next to

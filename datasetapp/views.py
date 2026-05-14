@@ -245,6 +245,13 @@ def about_dataset(request, dataset_name=None):
             )
         )
 
+    share_url = request.build_absolute_uri(
+        django_reverse(
+            "datasetapp:dataset-about-a-dataset",
+            kwargs={"dataset_name": ds.slug},
+        )
+    )
+
     context = {
         "ds": ds,
         "dfile": dfile,
@@ -260,6 +267,7 @@ def about_dataset(request, dataset_name=None):
         "next_dataset": next_dataset,
         "preview_rows": preview_rows,
         "quickstart_url": quickstart_url,
+        "share_url": share_url,
         "download_series_json": json.dumps(_download_series(ds)),
     }
     return TemplateResponse(request, "datasetapp/dataset_info.html", context)

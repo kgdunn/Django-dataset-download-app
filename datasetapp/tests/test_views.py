@@ -275,6 +275,20 @@ def test_about_omits_preview_when_only_non_csv_files(client, db):
     assert "dataset-preview" not in response.content.decode()
 
 
+def test_about_renders_share_button_with_absolute_url(client, dataset, csv_file):
+    response = client.get(
+        reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])
+    )
+    body = response.content.decode()
+    assert response.status_code == 200
+    expected = response.wsgi_request.build_absolute_uri(
+        reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])
+    )
+    assert 'class="share-btn"' in body
+    assert f'data-share-url="{expected}"' in body
+    assert f'data-share-title="{dataset.name}"' in body
+
+
 def test_healthz_returns_200_plain_ok(client, db):
     response = client.get(reverse("datasetapp:healthz"))
     assert response.status_code == 200

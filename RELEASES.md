@@ -1,5 +1,47 @@
 # Releases
 
+## v1.11.0
+
+Dataset detail page (`/info/<slug>`) now has a **Share** button next to
+the dataset title — pill-styled like the existing quickstart `Copy`
+button, with a share-graph icon. Clicking it invokes the browser's
+native share sheet via the [Web Share
+API](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share)
+on supporting platforms (iOS Safari, Android Chrome, recent desktop
+Safari/Edge), so visitors can hand off the dataset URL to Messages /
+Mail / WhatsApp / etc. in one tap. On browsers without `navigator.share`
+(most desktop Chrome/Firefox), it falls back to copying the URL to the
+clipboard and flashes a "Copied" confirmation on the button for 1.5s.
+
+- **`datasetapp/views.py`** — `about_dataset` now also exports
+  `share_url` into the template context, computed via
+  `request.build_absolute_uri(reverse(...))` so it picks up the same
+  scheme + host the visitor is already on (works for both `openmv.net`
+  and `test.openmv.net` without configuration).
+- **`datasetapp/templates/datasetapp/dataset_info.html`** — the
+  bare `<h3>{{ ds.name }}</h3>` is wrapped in a flex `.detail-title`
+  container with the new `<button class="share-btn">` to its right; the
+  button carries the canonical URL on `data-share-url`. A small inline
+  `<script>` wires up the click handler: `navigator.share` first, then
+  `navigator.clipboard.writeText`, and finally a textarea+execCommand
+  fallback for the long tail. `AbortError` from `navigator.share` (user
+  dismissed the OS sheet) deliberately does **not** fall back to copy
+  — that would surprise the user.
+- **`datasetapp/templates/datasetapp/base.html`** — `.detail-title`
+  / `.share-btn` styles added alongside the existing `.code-copy-btn`
+  rules. The button reuses the project's `--color-accent-soft` /
+  `is-copied` palette, so the "Copied" feedback matches the rest of
+  the detail page in both light and dark themes.
+- **`datasetapp/tests/test_views.py`** — new
+  `test_about_renders_share_button_with_absolute_url` asserts the
+  detail page rendering carries a `.share-btn` element with the
+  absolute URL on `data-share-url` and the dataset name on
+  `data-share-title`. Existing detail-page tests still pass (24 / 24
+  green locally with `SECRET_KEY=… uv run pytest`).
+- **`pyproject.toml`** / **`RELEASES.md`**: MINOR bump (additive
+  user-visible feature, no URL / schema / template-structure break),
+  per the policy in `CLAUDE.md`.
+
 ## v1.10.1
 
 Documentation: rename the off-host backup S3 bucket from `openmv-backups`

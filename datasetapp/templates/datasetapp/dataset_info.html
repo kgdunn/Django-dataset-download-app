@@ -5,7 +5,15 @@
 {% block body %}
 <p class="detail-topbar"><a href="{% url 'datasetapp:dataset-home-page' %}">&larr; Back to all datasets</a></p>
 
-<h3>{{ ds.name }}</h3>
+<div class="detail-title">
+    <h3>{{ ds.name }}</h3>
+    <button type="button" class="share-btn" data-share-url="{{ share_url }}"
+            data-share-title="{{ ds.name }}"
+            aria-label="Share link to this dataset">
+        <span class="share-btn__icon" aria-hidden="true"></span>
+        <span class="share-btn__label">Share</span>
+    </button>
+</div>
 
 <div class="detail-grid">
     <div id="dataset-content">
@@ -161,6 +169,50 @@ df.describe()</code></pre>
 <script type="text/javascript" crossorigin="anonymous"
     integrity="sha384-vi9R4hb1goLJPJDHY+dOmXxcY3HGv6tJIwHxy5JunOTxJGHbsSuubPgl++SNxYYi"
     src="https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script>
+(function () {
+    var btn = document.querySelector('.share-btn');
+    if (!btn) return;
+    var labelEl = btn.querySelector('.share-btn__label');
+    var url = btn.getAttribute('data-share-url') || window.location.href;
+    var title = btn.getAttribute('data-share-title') || document.title;
+    function flash(text) {
+        var original = labelEl ? labelEl.textContent : '';
+        btn.classList.add('is-copied');
+        if (labelEl) labelEl.textContent = text;
+        setTimeout(function () {
+            btn.classList.remove('is-copied');
+            if (labelEl) labelEl.textContent = original;
+        }, 1500);
+    }
+    function copyFallback() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(function () { flash('Copied'); }, function () {});
+            return;
+        }
+        var ta = document.createElement('textarea');
+        ta.value = url;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); flash('Copied'); } catch (e) {}
+        document.body.removeChild(ta);
+    }
+    btn.addEventListener('click', function () {
+        if (navigator.share) {
+            navigator.share({title: title, url: url}).catch(function (err) {
+                // AbortError = user dismissed the share sheet; don't fall back.
+                if (err && err.name !== 'AbortError') copyFallback();
+            });
+        } else {
+            copyFallback();
+        }
+    });
+})();
+</script>
 
 <nav class="detail-nav">
     {% if prev_dataset %}

@@ -1,5 +1,28 @@
 # Releases
 
+## v1.13.0
+
+Homepage search bar gets a hero variant, matching the sister literature
+site's `.lit-search--hero` proportions: roughly double the regular input
+height (96px), 2rem typography, a larger pill button, and the same
+viewport-aware shrink at 768px / 480px breakpoints. The goal is the same
+as on the literature side — make search the obvious primary action when
+a visitor lands on the dataset list.
+
+- **`datasetapp/templates/datasetapp/base.html`** — add a
+  `.dataset-search--hero` modifier with hero-sized padding, 2rem font,
+  `--radius-lg` corners, `--shadow` elevation, and a matching submit
+  button (96px min-height, 140px min-width). Tablet (≤768px) drops to a
+  ~h3-sized 60px row; phone (≤480px) drops to a touchable 48px row
+  without stacking. The base `.dataset-search` stays unchanged for any
+  future non-hero use.
+- **`datasetapp/templates/datasetapp/all_datasets.html`** — apply the
+  hero modifier (`class="dataset-search dataset-search--hero"`) on the
+  homepage form so the bigger sizing only kicks in on the main visitor
+  entry point.
+
+Pure CSS + a single class addition; no model / view / URL changes.
+
 ## v1.12.0
 
 Visual refresh: swap the teal palette for the sister literature site's

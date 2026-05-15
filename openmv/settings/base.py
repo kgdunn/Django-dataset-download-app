@@ -129,7 +129,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / STATIC_URL.strip("/")
 
-# Media files (admin-uploaded dataset CSV/XLS/XML/MAT files).
+# Media files (admin-uploaded dataset CSV/XLSX/XML/MAT files).
 # In production Caddy serves /media/ directly; locally `runserver` only
 # serves it when openmv/urls.py wires up `static()` under DEBUG.
 MEDIA_URL = "/media/"

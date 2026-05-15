@@ -214,6 +214,35 @@ def test_download_malformed_filename_returns_404_without_hit(client, dataset, cs
     assert Hit.objects.count() == before
 
 
+XLSX_FIXTURE_BYTES = b"PK\x03\x04 fake xlsx body"
+
+
+@pytest.fixture
+def xlsx_file(db, dataset, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    datasets_dir = tmp_path / "datasets"
+    datasets_dir.mkdir()
+    (datasets_dir / "iris.xlsx").write_bytes(XLSX_FIXTURE_BYTES)
+    return DataFile.objects.create(
+        file_type="XLSX",
+        link_to_file="datasets/iris.xlsx",
+        dataset=dataset,
+    )
+
+
+def test_download_xlsx_file_streams_bytes(client, dataset, xlsx_file):
+    response = client.get(reverse("datasetapp:dataset-download", args=["iris.xlsx"]))
+    assert response.status_code == 200
+    assert b"".join(response.streaming_content) == XLSX_FIXTURE_BYTES
+
+
+def test_download_legacy_xls_url_resolves_to_xlsx_row(client, dataset, xlsx_file):
+    # Pre-#113 links used the .xls extension; they must still resolve.
+    response = client.get(reverse("datasetapp:dataset-download", args=["iris.xls"]))
+    assert response.status_code == 200
+    assert b"".join(response.streaming_content) == XLSX_FIXTURE_BYTES
+
+
 def test_about_includes_prev_next_when_neighbours_exist(client, db):
     for slug, name in [("a-set", "Alpha"), ("b-set", "Beta"), ("c-set", "Gamma")]:
         ds = Dataset.objects.create(

@@ -91,7 +91,7 @@ class Dataset(models.Model):
 
 class DataFile(models.Model):
     """
-    Defines a link to a data file in a particular format e.g XLS, CSV, MAT.
+    Defines a link to a data file in a particular format e.g XLSX, CSV, MAT.
 
     Note: each data file can only correspond to one ``Dataset`` instance. It's
           like the ``Book`` in the limited Book-Authors case, where each book
@@ -110,7 +110,7 @@ class DataFile(models.Model):
     # Short name (usually 3 characters) and description on how to use it
     file_type_choice = (
         ("CSV", "Comma Separated Value file"),
-        ("XLS", "Microsoft Excel"),
+        ("XLSX", "Microsoft Excel"),
         ("XML", "eXtensible Markup Language"),
         ("MAT", "MATLAB MAT file"),
     )
@@ -140,8 +140,9 @@ class DataFile(models.Model):
         if not self.link_to_file or not self.file_type:
             return
         actual_ext = Path(self.link_to_file.name).suffix.lower().lstrip(".")
-        # Treat .xlsx as a valid extension for the XLS file_type.
-        valid_ext = {"xls": {"xls", "xlsx"}}.get(
+        # Treat the legacy .xls extension as valid for the XLSX file_type, so
+        # datasets uploaded before issue #113 don't fail validation on re-save.
+        valid_ext = {"xlsx": {"xls", "xlsx"}}.get(
             self.file_type.lower(), {self.file_type.lower()}
         )
         if actual_ext not in valid_ext:

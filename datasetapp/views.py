@@ -31,12 +31,15 @@ from .models import DataFile, Dataset, Hit, Tag
 
 log_file = logging.getLogger("datasetapp")
 
-# Public download URLs are restricted to a slug + 3-letter extension, matching
-# Dataset.slug (a SlugField) and DataFile.file_type (always 3 letters today:
-# CSV / XLS / XML / MAT). Anything else returns 404 — earlier the view raised
-# ValueError on a missing/extra dot, which surfaced as a 500 and noise in the
-# logs.
-_DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3}$")
+# Public download URLs are restricted to a slug + 3-or-4-letter extension,
+# matching Dataset.slug (a SlugField) and DataFile.file_type (CSV / XLSX /
+# XML / MAT). Anything else returns 404 — earlier the view raised ValueError
+# on a missing/extra dot, which surfaced as a 500 and noise in the logs.
+_DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3,4}$")
+
+# Legacy ``/file/<slug>.xls`` links (the file_type was "XLS" before issue
+# #113) still resolve to the now-"XLSX" DataFile row.
+_DOWNLOAD_EXT_ALIASES = {"xls": "xlsx"}
 
 # Homepage free-text search (issue #94). ``icontains`` keeps SQLite dev and
 # Postgres prod in lock-step; the catalogue is small enough that a six-field
@@ -295,6 +298,7 @@ def download_dataset(request, file_name=None):
         return HttpResponse("File not found", status=404)
 
     base_name, extension = file_name.rsplit(".", 1)
+    extension = _DOWNLOAD_EXT_ALIASES.get(extension, extension)
 
     # Which ``dataset`` object did this come from.  The file_name is the same
     # as the ``dataset`` object's slug (also the primary key) field.

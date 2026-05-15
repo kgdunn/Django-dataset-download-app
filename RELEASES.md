@@ -1,5 +1,25 @@
 # Releases
 
+## v1.14.0
+
+Rename the `XLS` data-file type to `XLSX` so the catalogue describes the
+modern Excel format it actually serves (issue #113).
+
+- **`datasetapp/models.py`** — `DataFile.file_type_choice` now offers
+  `XLSX` instead of `XLS`. `DataFile.clean()` keeps accepting a legacy
+  `.xls` extension for the `XLSX` file type, so datasets uploaded before
+  this change don't fail validation on re-save.
+- **`datasetapp/migrations/0003_rename_xls_to_xlsx.py`** — alters the
+  `file_type` choices and updates every existing `XLS` row to `XLSX`
+  (reversible).
+- **`datasetapp/views.py`** — `_DOWNLOAD_FILENAME_RE` now accepts a 3- or
+  4-letter extension so `/file/<slug>.xlsx` resolves; a new
+  `_DOWNLOAD_EXT_ALIASES` map folds the legacy `.xls` extension onto the
+  `XLSX` row so pre-#113 `/file/<slug>.xls` links keep working.
+- **`datasetapp/tests/test_security.py`** — `DataFile.clean()` coverage
+  updated for the `XLSX` file type, plus a regression test for the legacy
+  `.xls`-on-disk case.
+
 ## v1.13.0
 
 Homepage search bar gets a hero variant, matching the sister literature

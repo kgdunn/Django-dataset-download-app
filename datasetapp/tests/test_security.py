@@ -183,7 +183,7 @@ def test_datafile_clean_rejects_extension_mismatch(db):
         df.full_clean()
 
 
-def test_datafile_clean_accepts_xlsx_for_xls_filetype(db):
+def test_datafile_clean_accepts_xlsx_for_xlsx_filetype(db):
     ds = Dataset.objects.create(
         name="X",
         slug="xlsx-ok",
@@ -193,8 +193,27 @@ def test_datafile_clean_accepts_xlsx_for_xls_filetype(db):
         data_source="s",
     )
     df = DataFile(
-        file_type="XLS",
+        file_type="XLSX",
         link_to_file="datasets/xlsx-ok.xlsx",
+        dataset=ds,
+    )
+    df.full_clean()  # should not raise
+
+
+def test_datafile_clean_accepts_legacy_xls_for_xlsx_filetype(db):
+    """Datasets uploaded before issue #113 still have a .xls file on disk;
+    re-saving them under the new XLSX file_type must not fail validation."""
+    ds = Dataset.objects.create(
+        name="X",
+        slug="legacy-xls-ok",
+        description="d",
+        author_name="a",
+        usage_restrictions="None",
+        data_source="s",
+    )
+    df = DataFile(
+        file_type="XLSX",
+        link_to_file="datasets/legacy-xls-ok.xls",
         dataset=ds,
     )
     df.full_clean()  # should not raise

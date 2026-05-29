@@ -91,7 +91,13 @@ def _annotate_with_downloads(queryset):
 
 def display_by_tag(request, tag):
     """
-    Shows only the datasets with the given tag
+    Shows datasets whose tags start with the given prefix.
+
+    Uses ``tags__name__startswith=tag`` rather than exact matching, so the
+    filter ``tag='python'`` also surfaces datasets tagged 'python-data',
+    'python-science', etc. The page header still resolves ``tag`` against
+    ``Tag.objects.get(name__exact=...)`` for its description, so an exact
+    Tag row with that name must exist.
     """
     log_file.debug("Tag view for tag=%s" % tag)
     dataset_list = _annotate_with_downloads(

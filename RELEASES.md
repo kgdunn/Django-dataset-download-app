@@ -1,5 +1,19 @@
 # Releases
 
+## v1.14.1
+
+Docstring corrections in `datasetapp/`:
+
+- **`datasetapp/templatetags/extra_tags.py`** — the `slice_string`
+  filter's docstring claimed `slice_string:"0:3"` on `'my_long_string'`
+  returned `'my'`, but Python slice semantics actually yield `'my_'`
+  (indices 0, 1, 2). Example corrected and the docstring now states the
+  function delegates to `value[start:end]`.
+- **`datasetapp/views.py`** — `display_by_tag` docstring claimed it
+  filters by an exact tag, but the queryset uses
+  `tags__name__startswith=tag`, so the page lists every dataset whose
+  tag begins with the given prefix. Docstring updated to reflect that.
+
 ## v1.14.0
 
 Rename the `XLS` data-file type to `XLSX` so the catalogue describes the

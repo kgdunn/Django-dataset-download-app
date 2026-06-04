@@ -67,12 +67,13 @@ def sanitise_markup(value):
 def slice_string(value, args):
     """
     Slices a string: returns characters in string, starting with ``start``
-    and ending *one character* before ``end``.
+    and ending *one character* before ``end`` (i.e. Python slice semantics,
+    ``value[start:end]``).
 
     Examples:
-    {{ 'my_long_string' | slice_string:"2" }}  will return '_'
+    {{ 'my_long_string' | slice_string:"2" }}   will return '_'
     {{ 'my_long_string' | slice_string:":2" }}  will return 'my'
-    {{ 'my_long_string' | slice_string:"0:3" }} will return 'my'
+    {{ 'my_long_string' | slice_string:"0:3" }} will return 'my_'
     {{ 'my_long_string' | slice_string:"3:7" }} will return 'long'
     {{ 'my_long_string' | slice_string:"8:" }}    will return 'string'
     {{ 'my_long_string' | slice_string:"8:100" }} will return 'string'

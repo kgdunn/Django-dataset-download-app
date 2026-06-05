@@ -296,9 +296,10 @@ def download_dataset(request, file_name=None):
     # django-name='dataset-download'
     file_name = (file_name or "").lower()
 
-    # Reject anything that isn't slug+single-dot+3-letter extension up front,
-    # so a stray dot (or no dot at all) returns 404 rather than crashing the
-    # view with a ValueError that surfaces as a 500.
+    # Reject anything that isn't slug+single-dot+3-or-4-letter extension up
+    # front, so a stray dot (or no dot at all) returns 404 rather than
+    # crashing the view with a ValueError that surfaces as a 500. The 4-letter
+    # case is the ``XLSX`` file type added in issue #113.
     if not _DOWNLOAD_FILENAME_RE.match(file_name):
         log_file.warning("Rejected malformed download filename: %r", file_name)
         return HttpResponse("File not found", status=404)

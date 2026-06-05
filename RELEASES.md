@@ -1,5 +1,19 @@
 # Releases
 
+## v1.14.2
+
+More docstring/comment corrections in the dataset app:
+
+- **`datasetapp/views.py`** — the inline comment above the regex check in
+  `download_dataset` claimed the view rejects anything that isn't
+  "slug+single-dot+3-letter extension", but `_DOWNLOAD_FILENAME_RE` actually
+  accepts a 3- or 4-letter extension since the XLSX rename (v1.14.0 /
+  issue #113). Comment updated to match.
+- **`openmv/urls.py`** — the comment next to the `static()` call still
+  said "Production runs behind Apache, which intercepts /media/ before
+  requests reach Django." The Hetzner cutover moved production to Caddy
+  in May 2026; comment updated.
+
 ## v1.14.1
 
 Docstring corrections in `datasetapp/`:

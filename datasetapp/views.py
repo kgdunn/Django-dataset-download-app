@@ -296,7 +296,7 @@ def download_dataset(request, file_name=None):
     # django-name='dataset-download'
     file_name = (file_name or "").lower()
 
-    # Reject anything that isn't slug+single-dot+3-letter extension up front,
+    # Reject anything that isn't slug+single-dot+3-or-4-letter extension up front,
     # so a stray dot (or no dot at all) returns 404 rather than crashing the
     # view with a ValueError that surfaces as a 500.
     if not _DOWNLOAD_FILENAME_RE.match(file_name):

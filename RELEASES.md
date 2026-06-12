@@ -1,5 +1,19 @@
 # Releases
 
+## v1.14.2
+
+Docstring / comment corrections in `datasetapp/`:
+
+- **`datasetapp/templatetags/extra_tags.py`** — the `slice_string`
+  filter returns `False` (a bool) at line 84 when called with
+  `args is None` (i.e. the filter is invoked without an argument),
+  but the docstring only described the happy path. Spell out the
+  edge case so template authors know what to expect.
+- **`datasetapp/views.py`** — the inline comment in `download_dataset`
+  said "slug + single-dot + 3-letter extension", but
+  `_DOWNLOAD_FILENAME_RE` actually accepts a 3-or-4-letter extension
+  (issue #113 added `.xlsx`). Comment updated to match the regex.
+
 ## v1.14.1
 
 Docstring corrections in `datasetapp/`:

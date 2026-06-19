@@ -50,6 +50,7 @@ def sanitise_markup(value):
 
     LaTeX in ``\\(...\\)`` is left untouched: bleach escapes the backslashes
     as text, MathJax then re-parses the rendered DOM and renders the math.
+    Returns the empty string for ``None`` input.
     """
     if value is None:
         return ""

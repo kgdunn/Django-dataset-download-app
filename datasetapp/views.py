@@ -215,7 +215,22 @@ def _download_series(dataset, weeks=_SPARKLINE_WEEKS):
 
 def about_dataset(request, dataset_name=None):
     """
-    Displays more information about a dataset
+    Render the detail page for one dataset.
+
+    ``dataset_name`` is the URL slug; it is lowercased and looked up
+    against ``Dataset.slug``. An unknown slug logs an error and redirects
+    to the homepage rather than 404 (legacy behaviour kept for any stale
+    inbound link). For a valid slug, the view collects the dataset's
+    ``DataFile`` rows, computes prev/next slugs from the homepage's
+    slug-sorted ordering, builds an in-page CSV preview (skipped when the
+    dataset is hidden), constructs the Python-quickstart download URL,
+    counts ``Hit`` rows for the primary file, and serializes the
+    seven-year weekly download series for the sparkline.
+
+    Returns a ``TemplateResponse`` rendering
+    ``datasetapp/dataset_info.html``. The view itself does not write a
+    ``Hit`` row - hit-logging happens in ``download_dataset`` when the
+    visitor actually fetches a file.
     """
     # django-name='dataset-about-a-dataset'
 

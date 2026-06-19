@@ -300,8 +300,24 @@ def about_dataset(request, dataset_name=None):
 
 def download_dataset(request, file_name=None):
     """
-    Downloads a dataset.  Wrap through a view function so that we can increment
-    the hit counter.
+    Serve one dataset file and record the download.
+
+    ``file_name`` is the trailing component of the public URL
+    (``/file/<name>.<ext>``); it is lowercased and matched against
+    ``_DOWNLOAD_FILENAME_RE`` (``^[a-z0-9-]+\\.[a-z]{3,4}$``) before any
+    DB lookup, so a stray dot, an upper-case letter, or a missing
+    extension returns 404 instead of crashing with a ``ValueError``. The
+    base name resolves to ``Dataset.slug``; the extension (folded through
+    ``_DOWNLOAD_EXT_ALIASES`` so the legacy ``.xls`` still hits the now-
+    ``XLSX`` row) selects the matching ``DataFile``. If either lookup
+    fails the view returns a 404.
+
+    On success the view writes one ``Hit`` row pointing at the
+    ``DataFile`` (the download counter and sparkline are built from that
+    table) and returns a ``FileResponse`` streaming the bytes from
+    ``MEDIA_ROOT`` with ``Content-Disposition: attachment; filename=
+    <file_name>``. Hit-table write failures are logged but never break
+    the download (the bytes are what the visitor came for).
 
     We arrive by: http://localhost/file/cheddar-cheese.csv
     Django streams the file body directly via ``FileResponse``. The earlier

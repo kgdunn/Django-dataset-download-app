@@ -1,5 +1,32 @@
 # Releases
 
+## v1.14.2
+
+Docstring clarifications in `datasetapp/` — no behaviour change in any
+of the views or template filters.
+
+- **`datasetapp/views.py`** — `_csv_preview` now spells out that the
+  return value is the header row plus up to `max_rows` data rows (the
+  implementation reads `itertools.islice(reader, max_rows + 1)`), and
+  the docstring mentions the `max_bytes` early-return.
+- **`datasetapp/views.py`** — `about_dataset` docstring rewritten as a
+  short paragraph describing the lookup path, the prev/next computation,
+  the CSV preview, the quickstart URL, the sparkline series, and the
+  `TemplateResponse` it returns (renders
+  `datasetapp/dataset_info.html`); explicitly notes that the view does
+  not write a `Hit` row.
+- **`datasetapp/views.py`** — `download_dataset` docstring expanded to
+  describe the `file_name` parameter, the `_DOWNLOAD_FILENAME_RE`
+  validation, the `_DOWNLOAD_EXT_ALIASES` lookup, the `Hit` row written
+  on success, and the `FileResponse` (with
+  `Content-Disposition: attachment`) returned to the visitor.
+- **`datasetapp/templatetags/extra_tags.py`** — `sanitise_markup`
+  docstring now mentions that `None` input returns the empty string.
+- **`datasetapp/templatetags/extra_tags.py`** — `slice_string` docstring
+  now documents the latent `False`-return when the filter is called
+  without an argument. Behaviour is preserved (a docstring fix, not a
+  code change) because the live site cannot break.
+
 ## v1.14.1
 
 Docstring corrections in `datasetapp/`:

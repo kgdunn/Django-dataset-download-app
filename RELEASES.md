@@ -1,5 +1,29 @@
 # Releases
 
+## v1.15.0
+
+Repeat the detail page's Previous / Next navigation at the **bottom** of
+the page, so a visitor who has scrolled through the description, sparkline,
+quickstart, and CSV preview can move to the adjacent dataset without
+scrolling back up to the top topbar.
+
+- **`datasetapp/templates/datasetapp/dataset_info.html`** — after the CSV
+  preview block, render a second `<nav class="detail-topbar
+  detail-topbar--bottom">` carrying just the Previous (left) and Next
+  (right) chips. It reuses the same `prev_dataset` / `next_dataset` context
+  (slug ordering) as the top topbar, the same `__spacer` placeholder when
+  one side is missing, and is wrapped in `{% if prev_dataset or
+  next_dataset %}` so nothing renders on a single-dataset catalogue. No
+  "Back to home" chip — that stays at the top only.
+- **`datasetapp/templates/datasetapp/base.html`** — add a
+  `.detail-topbar--bottom` rule that flips the topbar's margin to sit below
+  the content. All other chip styling (grid, hover, mobile padding) is
+  reused unchanged.
+
+No view, URL, or model changes — the bottom bar reads the existing
+`prev_dataset` / `next_dataset` context. MINOR: additive, user-visible
+navigation affordance.
+
 ## v1.14.2
 
 Docstring clarifications in `datasetapp/` — no behaviour change in any

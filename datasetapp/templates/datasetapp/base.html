@@ -292,6 +292,10 @@ p  { margin: 0 0 var(--sp-3) 0; }
     padding: 8px var(--sp-4);
 }
 .detail-topbar__spacer { display: block; }
+/* Same chip row repeated at the foot of the detail page (Previous / Next
+   only — no "home" chip), so navigation is reachable after scrolling.
+   Flips the margin to sit below the content instead of above it. */
+.detail-topbar--bottom { margin: var(--sp-5) 0 0 0; }
 @media (max-width: 420px) {
     .detail-topbar { gap: 6px; }
     .detail-topbar__btn { padding: 6px 10px; font-size: var(--fs-xs); }

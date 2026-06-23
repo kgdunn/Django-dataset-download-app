@@ -50,6 +50,7 @@ def sanitise_markup(value):
 
     LaTeX in ``\\(...\\)`` is left untouched: bleach escapes the backslashes
     as text, MathJax then re-parses the rendered DOM and renders the math.
+    Returns the empty string for ``None`` input.
     """
     if value is None:
         return ""
@@ -69,6 +70,9 @@ def slice_string(value, args):
     Slices a string: returns characters in string, starting with ``start``
     and ending *one character* before ``end`` (i.e. Python slice semantics,
     ``value[start:end]``).
+
+    When ``args`` is ``None`` (i.e. the filter is called without an
+    argument) the function returns ``False`` and performs no slicing.
 
     Examples:
     {{ 'my_long_string' | slice_string:"2" }}   will return '_'

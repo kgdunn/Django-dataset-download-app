@@ -170,6 +170,21 @@ df.describe()</code></pre>
 </div>
 {% endif %}
 
+{% if prev_dataset or next_dataset %}
+<nav class="detail-topbar detail-topbar--bottom" aria-label="Dataset navigation">
+    {% if prev_dataset %}
+    <a class="detail-topbar__btn detail-topbar__btn--prev" href="{% url 'datasetapp:dataset-about-a-dataset' prev_dataset.slug %}" rel="prev">&larr; Previous</a>
+    {% else %}
+    <span class="detail-topbar__spacer" aria-hidden="true"></span>
+    {% endif %}
+    {% if next_dataset %}
+    <a class="detail-topbar__btn detail-topbar__btn--next" href="{% url 'datasetapp:dataset-about-a-dataset' next_dataset.slug %}" rel="next">Next &rarr;</a>
+    {% else %}
+    <span class="detail-topbar__spacer" aria-hidden="true"></span>
+    {% endif %}
+</nav>
+{% endif %}
+
 <!--
   Pinned to a specific patch version so jsDelivr cannot silently serve a
   different build than the one we tested with. The `integrity="sha384-…"`

@@ -1,5 +1,26 @@
 # Releases
 
+## v1.15.1
+
+Docstring and comment fixes surfaced by a docstring-vs-implementation
+audit of user-facing and computational functions. No behavioural changes.
+
+- **`datasetapp/models.py`** — the `DataFile` class docstring example
+  claimed the reverse relation `datafile.dataset_set.all()[0]` gave you
+  the parent dataset. That accessor never existed: `DataFile.dataset` is a
+  plain `ForeignKey`, so the correct form is `datafile.dataset`, and the
+  reverse (dataset -> files) is `dataset.datafile_set.all()`. Replaced the
+  broken example.
+- **`datasetapp/views.py`** — `_csv_preview` docstring said the function
+  returns `None` for a file "above `max_bytes`". It does not. The
+  implementation `read(max_bytes)`-truncates the input and parses whatever
+  survives, so `None` is only returned when the file is missing / not a
+  CSV / raises. Rewrote the docstring to describe the actual behaviour
+  (soft cap, best-effort parse).
+- **`openmv/urls.py`** — the comment on the dev-only media serving block
+  described the "Apache intercepts /media/" architecture the site left
+  behind in May 2026. Updated to reflect the current Caddy setup.
+
 ## v1.15.0
 
 Repeat the detail page's Previous / Next navigation at the **bottom** of

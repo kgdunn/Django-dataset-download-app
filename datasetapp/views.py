@@ -139,7 +139,12 @@ def display_all(request):
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
     """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or None
-    if the file is unreadable / above ``max_bytes``.
+    if the file is unreadable or is not a CSV.
+
+    Reads only the first ``max_bytes`` of the file (a soft cap that keeps a
+    huge file from blowing up the preview); parsing is best-effort on that
+    slice, so the preview may end mid-row rather than returning ``None`` for
+    an oversize file.
 
     The CSV is parsed with the default ``csv.excel`` dialect — the previous
     ``csv.Sniffer().sniff(...)`` call was reachable from any visitor hitting

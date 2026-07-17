@@ -1,5 +1,22 @@
 # Releases
 
+## v1.15.1
+
+Docstring corrections in `_csv_preview` and `DataFile` (2026-07-17). No
+behaviour change.
+
+- **`datasetapp/views.py`** — `_csv_preview` docstring previously claimed
+  the function returns ``None`` when the file is above ``max_bytes``. The
+  code never checks size; it just calls ``fh.read(max_bytes)`` which
+  silently truncates. Rewrote the docstring to describe the actual
+  behaviour (payload truncated at ``max_bytes``; ``None`` only when
+  ``file_obj is None``, when ``file_type`` is not CSV, or when an
+  IO/parse/decode exception is caught).
+- **`datasetapp/models.py`** — `DataFile` docstring showed the reverse
+  accessor form ``datafile.dataset_set.all()[0]`` for the FK to
+  ``Dataset``. That accessor is on the target of a reverse relation, not
+  the source; the forward FK is just ``datafile.dataset``. Fixed.
+
 ## v1.15.0
 
 Repeat the detail page's Previous / Next navigation at the **bottom** of

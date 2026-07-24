@@ -1,5 +1,22 @@
 # Releases
 
+## v1.15.1
+
+Docstring and comment corrections — no behaviour change.
+
+- **`datasetapp/models.py`** — the `DataFile` class docstring documented
+  the reverse-lookup accessor as `datafile.dataset_set.all()[0]`, but
+  `DataFile.dataset` is a `ForeignKey` (single-valued), so the correct
+  accessor is `datafile.dataset`. Docstring updated.
+- **`datasetapp/views.py`** — `_csv_preview` docstring claimed it returns
+  `None` when the file is above `max_bytes`, but the code only truncates
+  the read to `max_bytes` and parses whatever fits (`None` is returned
+  only when the file is unreadable). Docstring rewritten to describe the
+  actual behaviour.
+- **`openmv/urls.py`** — the media-serving comment said "Production runs
+  behind Apache", left over from the pre-Hetzner Linode setup. Production
+  runs behind Caddy on Hetzner (see CLAUDE.md); comment updated.
+
 ## v1.15.0
 
 Repeat the detail page's Previous / Next navigation at the **bottom** of

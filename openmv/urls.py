@@ -25,6 +25,6 @@ urlpatterns = [
 ]
 
 # Serve admin-uploaded media via the dev server. Production runs behind
-# Apache, which intercepts /media/ before requests reach Django.
+# Caddy, which intercepts /media/ before requests reach Django.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

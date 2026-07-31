@@ -1,5 +1,26 @@
 # Releases
 
+## v1.15.1
+
+Two docstring fixes in `datasetapp/` — no behaviour change.
+
+- **`datasetapp/models.py`** — the `DataFile` class docstring said "The
+  dataset to which a ``DataFile`` object points: ``datafile.dataset_set
+  .all()[0]``", but `DataFile.dataset` is a direct `ForeignKey` and the
+  correct accessor is simply `datafile.dataset`. The `_set` reverse
+  manager lives on the *other* side of the relation
+  (`dataset.datafile_set.all()`), not on `DataFile`. Rewrite the note to
+  spell that out.
+- **`datasetapp/views.py`** — the `_csv_preview` docstring claimed the
+  function returns `None` when a file is "above ``max_bytes``". It does
+  not: the read is `fh.read(max_bytes)`, which silently truncates rather
+  than rejecting oversize files. Rewrite the return-value paragraph to
+  list the real `None`-returning cases (missing file, non-CSV
+  `file_type`, exception during read/parse) and note that oversize files
+  are truncated instead of skipped.
+
+PATCH: comment-only, no code path changes.
+
 ## v1.15.0
 
 Repeat the detail page's Previous / Next navigation at the **bottom** of

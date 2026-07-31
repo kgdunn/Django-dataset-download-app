@@ -98,7 +98,10 @@ class DataFile(models.Model):
           can only have one author, but each author (Dataset) can have multiple
           books (``DataFile``).
 
-    The dataset to which a ``DataFile`` object points: datafile.dataset_set.all()[0]
+    The dataset to which a ``DataFile`` object points: ``datafile.dataset``
+    (the ``ForeignKey`` accessor). The reverse manager on ``Dataset`` is the
+    default ``dataset.datafile_set.all()``; there is no ``dataset_set``
+    accessor on ``DataFile``.
 
     Note: file data file must obey the following rules:
 

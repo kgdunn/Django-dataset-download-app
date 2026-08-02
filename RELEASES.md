@@ -1,5 +1,35 @@
 # Releases
 
+## v1.15.1
+
+Consolidated docstring/comment corrections, combining the still-applicable
+findings from the docstring-audit PR backlog (#120, #121, #126, #128, #131,
+#132) into one change. Documentation-only; no runtime behaviour change.
+
+One finding from that backlog — `slice_string` returning `False` when
+`args is None` — was already fixed on `master` and is not repeated here.
+
+- **`datasetapp/models.py`** — the `DataFile` class docstring pointed at
+  `datafile.dataset_set.all()[0]` as the way to reach the parent dataset.
+  That accessor does not exist: `DataFile.dataset` is a plain `ForeignKey`,
+  so the forward accessor is simply `datafile.dataset`, and the `_set`
+  reverse manager lives on the other side (`dataset.datafile_set.all()`).
+  Corrected, and the direction of the relation spelled out.
+- **`datasetapp/views.py`** — `_csv_preview` claimed it returns `None` for a
+  file "above `max_bytes`". It never checks size; `fh.read(max_bytes)`
+  silently truncates and the parse proceeds on whatever survives. Rewritten
+  to list the three real `None` cases (`file_obj is None`, non-CSV
+  `file_type`, exception during read/parse) and to note that oversize files
+  are truncated rather than skipped.
+- **`datasetapp/views.py`** — the comment above the `_DOWNLOAD_FILENAME_RE`
+  check in `download_dataset` described a "3-letter extension", but the
+  regex has been `[a-z]{3,4}` since the `XLSX` rename (issue #113).
+- **`openmv/urls.py`** — the comment on the dev-only media block still said
+  "Production runs behind Apache", left over from the pre-Hetzner Linode
+  setup. Production has run behind Caddy since the May 2026 cutover.
+
+PATCH bump — comment-only, no code path changes.
+
 ## v1.15.0
 
 Repeat the detail page's Previous / Next navigation at the **bottom** of

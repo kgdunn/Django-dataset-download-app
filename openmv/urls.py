@@ -24,7 +24,9 @@ urlpatterns = [
     path("", include("datasetapp.urls")),
 ]
 
-# Serve admin-uploaded media via the dev server. Production runs behind
-# Apache, which intercepts /media/ before requests reach Django.
+# Serve admin-uploaded media via the dev server. In production Caddy serves
+# /media/* directly from ./data/media/ before requests reach Django (the
+# Hetzner architecture in CLAUDE.md; the Apache setup this used to describe
+# was retired in the May 2026 cutover).
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

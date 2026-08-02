@@ -6,7 +6,7 @@
 # .github/dependabot.yml) opens weekly bump PRs; CI catches breakage before
 # merge. Bump in lockstep with the runtime stage below — the multi-stage
 # build expects identical glibc / libpq versions in both.
-FROM python:3.14-slim@sha256:c845af9399020c7e562969a13689e929074a10fd057acd1b1fad06a2fb068e97 AS builder
+FROM python:3.14-slim@sha256:44dd04494ee8f3b538294360e7c4b3acb87c8268e4d0a4828a6500b1eff50061 AS builder
 
 # Pinned to a specific uv version so a malicious push to ghcr.io/astral-sh/uv
 # can't land in our build. Bump in lockstep with `uv self update`.
@@ -22,7 +22,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 # ---- runtime ------------------------------------------------------------
-FROM python:3.14-slim@sha256:c845af9399020c7e562969a13689e929074a10fd057acd1b1fad06a2fb068e97 AS runtime
+FROM python:3.14-slim@sha256:44dd04494ee8f3b538294360e7c4b3acb87c8268e4d0a4828a6500b1eff50061 AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq5 curl \

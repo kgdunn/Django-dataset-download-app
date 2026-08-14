@@ -104,11 +104,24 @@ class DataFile(models.Model):
     (``dataset.datafile_set.all()``); there is no ``dataset_set`` on
     ``DataFile``.
 
-    Note: file data file must obey the following rules:
+    Note: two validation rules apply to the uploaded file:
 
-        1. The file_name must be the same as the ``Dataset`` slug field
-        2. The extension must be one of the entries in ``file_type_choice``
+        1. The extension must be one of the entries whitelisted on
+           ``link_to_file`` via ``FileExtensionValidator`` (``csv``,
+           ``xls``, ``xlsx``, ``xml``, ``mat``) — a superset of
+           ``file_type_choice`` because the legacy ``.xls`` extension
+           still resolves to the now-``XLSX`` file type (issue #113).
+        2. ``DataFile.clean`` additionally enforces that the actual file
+           extension matches the declared ``file_type`` (with the same
+           ``xls``/``xlsx`` alias), so a ``.csv`` file cannot be uploaded
+           under a declared ``file_type`` of ``XLSX`` and vice versa.
 
+    There is **no** rule that the file basename must equal the parent
+    ``Dataset.slug`` — nothing in the model, form, or admin enforces
+    that. The public download URL (``/file/<slug>.<ext>`` in
+    ``download_dataset``) is built from ``Dataset.slug`` and the
+    ``DataFile.file_type`` at request time; the on-disk basename is not
+    consulted.
     """
 
     # Short name (usually 3 characters) and description on how to use it

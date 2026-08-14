@@ -98,6 +98,16 @@ def display_by_tag(request, tag):
     'python-science', etc. The page header still resolves ``tag`` against
     ``Tag.objects.get(name__exact=...)`` for its description, so an exact
     Tag row with that name must exist.
+
+    Because the M2M ``tags`` join is not deduplicated here (no
+    ``.distinct()`` on the outer queryset), a dataset that carries more
+    than one prefix-matching tag can appear as multiple rows in the
+    rendered list. The download count is unaffected — the
+    ``num_downloads`` aggregate added by ``_annotate_with_downloads``
+    uses ``distinct=True`` on ``Count("datafile__hit", ...)`` — but if
+    duplicate row rendering becomes user-visible, add ``.distinct()`` to
+    the queryset before ``_annotate_with_downloads`` (matching the
+    pattern in ``display_all``).
     """
     log_file.debug("Tag view for tag=%s" % tag)
     dataset_list = _annotate_with_downloads(
@@ -138,8 +148,9 @@ def display_all(request):
 
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
-    """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or None
-    when there is nothing to preview.
+    """Returns ``None`` when the file cannot be previewed (three cases below), or a list of rows
+    (header row plus up to ``max_rows`` data rows from a CSV ``DataFile``; possibly empty if the
+    file has no data rows).
 
     Returns ``None`` in exactly three cases: ``file_obj`` is ``None``, its
     ``file_type`` is not ``CSV``, or reading/decoding/parsing raises (logged
@@ -229,10 +240,14 @@ def about_dataset(request, dataset_name=None):
     to the homepage rather than 404 (legacy behaviour kept for any stale
     inbound link). For a valid slug, the view collects the dataset's
     ``DataFile`` rows, computes prev/next slugs from the homepage's
-    slug-sorted ordering, builds an in-page CSV preview (skipped when the
-    dataset is hidden), constructs the Python-quickstart download URL,
-    counts ``Hit`` rows for the primary file, and serializes the
-    seven-year weekly download series for the sparkline.
+    slug-sorted ordering, builds an in-page CSV preview, constructs the
+    Python-quickstart download URL, counts ``Hit`` rows for the primary
+    file, and serializes the seven-year weekly download series for the
+    sparkline. The ``is_hidden`` guard around the CSV preview and
+    quickstart URL is defense-in-depth against a future manager change;
+    in practice it is unreachable because ``DatasetManager.get_queryset``
+    already filters ``is_hidden=True`` rows out before the lookup on
+    ``Dataset.slug`` reaches this view.
 
     Returns a ``TemplateResponse`` rendering
     ``datasetapp/dataset_info.html``. The view itself does not write a
@@ -319,12 +334,15 @@ def download_dataset(request, file_name=None):
     ``XLSX`` row) selects the matching ``DataFile``. If either lookup
     fails the view returns a 404.
 
-    On success the view writes one ``Hit`` row pointing at the
-    ``DataFile`` (the download counter and sparkline are built from that
-    table) and returns a ``FileResponse`` streaming the bytes from
-    ``MEDIA_ROOT`` with ``Content-Disposition: attachment; filename=
-    <file_name>``. Hit-table write failures are logged but never break
-    the download (the bytes are what the visitor came for).
+    Once the file record has been resolved the view writes one ``Hit``
+    row pointing at the ``DataFile`` (the download counter and sparkline
+    are built from that table) and returns a ``FileResponse`` streaming
+    the bytes from ``MEDIA_ROOT`` with ``Content-Disposition: attachment;
+    filename=<file_name>``. The ``Hit`` is written **before** the stream
+    starts, so it counts the download regardless of whether the client
+    finishes reading the response body. Hit-table write failures are
+    logged but never break the download (the bytes are what the visitor
+    came for).
 
     We arrive by: http://localhost/file/cheddar-cheese.csv
     Django streams the file body directly via ``FileResponse``. The earlier

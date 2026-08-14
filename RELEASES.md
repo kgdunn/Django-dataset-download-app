@@ -1,5 +1,45 @@
 # Releases
 
+## v1.15.2
+
+Docs: docstring accuracy audit and corrections in `datasetapp` views,
+models, and template tags. Documentation-only; no runtime behaviour
+change.
+
+- **`datasetapp/views.py`** — `about_dataset` docstring no longer claims
+  the CSV preview is "skipped when the dataset is hidden"; the
+  `is_hidden` guard is unreachable in practice because
+  `DatasetManager.get_queryset` filters those rows out before the slug
+  lookup. Reworded as "defense-in-depth against a future manager
+  change".
+- **`datasetapp/views.py`** — `_csv_preview` summary line rewritten to
+  accurately describe the two possible return shapes (`None` when the
+  file cannot be previewed, or a list of rows possibly empty when the
+  file has no data rows).
+- **`datasetapp/views.py`** — `download_dataset` docstring changed from
+  "On success the view writes one `Hit` row" to "Once the file record
+  has been resolved …" and adds a note that the `Hit` is written before
+  the stream starts, so it counts the download regardless of whether the
+  client finishes reading the response body.
+- **`datasetapp/views.py`** — `display_by_tag` docstring adds a note
+  that the M2M `startswith` filter can produce duplicate rows for a
+  dataset carrying multiple prefix-matching tags (no `.distinct()` on
+  the outer queryset), and clarifies that the `num_downloads` aggregate
+  is unaffected because `_annotate_with_downloads` already uses
+  `distinct=True`.
+- **`datasetapp/models.py`** — `DataFile` class docstring: removed rule
+  (1) ("file_name must be the same as `Dataset` slug") because nothing
+  in the model, form, or admin enforces it; reworded rule (2) to note
+  that the field-level `FileExtensionValidator` enforces the extension
+  whitelist while `DataFile.clean` additionally enforces that the actual
+  extension matches the declared `file_type`.
+- **`datasetapp/templatetags/extra_tags.py`** — `slice_string` docstring
+  no longer describes the "`args is None`" branch, which is dead code
+  because the filter is registered with a required argument. The
+  defensive `if args is None: return False` code is left in place.
+
+PATCH bump — docstring-only, no code path changes.
+
 ## v1.15.1
 
 Consolidated docstring/comment corrections, combining the still-applicable

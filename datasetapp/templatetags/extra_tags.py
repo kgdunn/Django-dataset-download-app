@@ -71,9 +71,6 @@ def slice_string(value, args):
     and ending *one character* before ``end`` (i.e. Python slice semantics,
     ``value[start:end]``).
 
-    When ``args`` is ``None`` (i.e. the filter is called without an
-    argument) the function returns ``False`` and performs no slicing.
-
     Examples:
     {{ 'my_long_string' | slice_string:"2" }}   will return '_'
     {{ 'my_long_string' | slice_string:":2" }}  will return 'my'

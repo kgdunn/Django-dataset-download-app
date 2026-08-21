@@ -1,5 +1,35 @@
 # Releases
 
+## v1.15.2
+
+Follow-up round of docstring corrections; documentation-only, no runtime
+behaviour change.
+
+- **`datasetapp/templatetags/extra_tags.py`** — `slice_string` claimed
+  Python slice semantics unconditionally, but when the filter argument
+  contains no colon the code returns ``value[int(args)]`` (a single
+  character), which raises ``IndexError`` if out of range. Docstring
+  rewritten to describe both branches (colon → slice; bare integer →
+  single-character index) and to note that the ``args is None → False``
+  path is only reachable from Python callers — Django templates cannot
+  invoke a filter without its argument.
+- **`datasetapp/views.py`** — `_csv_preview` said it returns ``None``
+  "when there is nothing to preview", but a valid CSV that yields no
+  parseable rows returns ``[]``, not ``None``. Docstring now spells out
+  all three return shapes: a list of up to ``max_rows + 1`` rows for a
+  valid CSV, ``[]`` when parsing succeeded with no rows, and ``None``
+  only for the three failure cases (``file_obj`` is ``None``,
+  non-``CSV`` ``file_type``, or read/parse raised).
+- **`datasetapp/models.py`** — the `Hit` class docstring called the
+  table "append-only", but `date_and_time` uses ``auto_now=True`` and so
+  would be rewritten on any ``.save()`` of an existing row. The behaviour
+  is intentional (and safe because ``create_hit`` only inserts) but the
+  contract was undocumented. Docstring now records that ``auto_now=True``
+  is the current field configuration, notes that this coincides with the
+  download timestamp only because rows are never re-saved, and points at
+  ``auto_now_add=True`` as the future migration if strict append-only
+  semantics are ever required.
+
 ## v1.15.1
 
 Consolidated docstring/comment corrections, combining the still-applicable

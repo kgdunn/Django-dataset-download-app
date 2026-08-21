@@ -168,6 +168,15 @@ class Hit(models.Model):
     One row per dataset download. Stores only the file reference and the
     timestamp — no IP, User-Agent, or referrer — so the table can be retained
     indefinitely without holding visitor PII (see #17).
+
+    The ``date_and_time`` field uses ``auto_now=True``, so it reflects the
+    row's last save time. Because rows are only inserted (by ``create_hit``
+    in ``views.py``) and never updated afterwards, that last-save timestamp
+    coincides with the download timestamp in practice, and the table is
+    effectively append-only. Future writers must not ``.save()`` an existing
+    ``Hit`` row without accepting that the stored timestamp will be
+    overwritten. If strict append-only semantics are ever required, migrate
+    the field to ``auto_now_add=True`` in a separate PR.
     """
 
     date_and_time = models.DateTimeField(auto_now=True)

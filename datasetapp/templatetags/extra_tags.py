@@ -67,12 +67,21 @@ def sanitise_markup(value):
 @stringfilter
 def slice_string(value, args):
     """
-    Slices a string: returns characters in string, starting with ``start``
-    and ending *one character* before ``end`` (i.e. Python slice semantics,
-    ``value[start:end]``).
+    Trim or index a string. Two branches based on the shape of ``args``:
 
-    When ``args`` is ``None`` (i.e. the filter is called without an
-    argument) the function returns ``False`` and performs no slicing.
+    * If ``args`` contains a colon, it is parsed as Python slice syntax and
+      the function returns ``value[start:end]`` (Python slice semantics —
+      ``start`` inclusive, ``end`` exclusive, either endpoint may be
+      omitted). Out-of-range endpoints are clamped, matching Python slicing.
+    * If ``args`` has no colon, it is parsed as a single integer index and
+      the function returns ``value[int(args)]`` (a single character). An
+      index outside ``range(-len(value), len(value))`` raises ``IndexError``.
+
+    When ``args`` is ``None`` the function returns ``False`` and performs no
+    slicing. This branch is only reachable from Python callers: Django
+    templates cannot invoke a filter with a missing argument (they would
+    either omit the filter or pass an empty-string default), so in normal
+    template use this ``None`` path never fires.
 
     Examples:
     {{ 'my_long_string' | slice_string:"2" }}   will return '_'

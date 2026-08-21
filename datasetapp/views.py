@@ -138,15 +138,24 @@ def display_all(request):
 
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
-    """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or None
-    when there is nothing to preview.
+    """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or
+    ``None`` / ``[]`` in the cases described below.
 
-    Returns ``None`` in exactly three cases: ``file_obj`` is ``None``, its
-    ``file_type`` is not ``CSV``, or reading/decoding/parsing raises (logged
-    as a warning). A file larger than ``max_bytes`` is **not** rejected — the
-    read is a single ``fh.read(max_bytes)``, so an oversize file is silently
-    truncated at that boundary and the preview is built from the leading
-    slice, which may end mid-row.
+    Three possible return shapes:
+
+    * ``list`` of up to ``max_rows + 1`` rows (header row plus data rows)
+      for a valid CSV. Fewer rows are returned if the file contains fewer.
+    * ``[]`` when the file was read and parsed successfully but no rows
+      came back (e.g. the file is empty, or the truncated leading slice
+      contained no complete parseable row).
+    * ``None`` in exactly three cases: ``file_obj`` is ``None``, its
+      ``file_type`` is not ``CSV``, or reading/decoding/parsing raises
+      (logged as a warning).
+
+    A file larger than ``max_bytes`` is **not** rejected — the read is a
+    single ``fh.read(max_bytes)``, so an oversize file is silently truncated
+    at that boundary and the preview is built from the leading slice, which
+    may end mid-row.
 
     The CSV is parsed with the default ``csv.excel`` dialect — the previous
     ``csv.Sniffer().sniff(...)`` call was reachable from any visitor hitting

@@ -104,10 +104,20 @@ class DataFile(models.Model):
     (``dataset.datafile_set.all()``); there is no ``dataset_set`` on
     ``DataFile``.
 
-    Note: file data file must obey the following rules:
+    Note: a data file is expected (but not enforced by ``clean()``) to
+    obey the following rules:
 
-        1. The file_name must be the same as the ``Dataset`` slug field
-        2. The extension must be one of the entries in ``file_type_choice``
+        1. The on-disk base name should match the parent ``Dataset``'s
+           ``slug`` field. This is a convention, not a validator:
+           ``DataFile.clean()`` only checks the extension against
+           ``file_type``, and ``download_dataset`` looks up files by
+           ``(dataset__slug, file_type)`` rather than by base name, so a
+           mismatched base name will still serve if the extension pair is
+           right. Keeping the base name aligned with the slug is what
+           keeps the ``/media/datasets/...`` layout tidy.
+        2. The extension must be one of the entries in
+           ``file_type_choice``. This one *is* enforced (see
+           ``clean()``).
 
     """
 
@@ -168,6 +178,16 @@ class Hit(models.Model):
     One row per dataset download. Stores only the file reference and the
     timestamp — no IP, User-Agent, or referrer — so the table can be retained
     indefinitely without holding visitor PII (see #17).
+
+    ``date_and_time`` uses ``auto_now=True`` rather than
+    ``auto_now_add=True``, so a re-``save()`` on a ``Hit`` row would rewrite
+    the timestamp. In practice ``Hit`` rows are only ever created by
+    ``download_dataset`` (single ``.save()``) and never edited afterwards:
+    ``HitAdmin`` marks every column read-only and disables
+    ``has_add_permission``, so the append-only, one-row-per-download
+    invariant is upheld by "no one ever saves twice", not by the field
+    itself. The seven-year weekly sparkline (``_download_series``) relies
+    on that invariant to interpret each row as a real download event.
     """
 
     date_and_time = models.DateTimeField(auto_now=True)

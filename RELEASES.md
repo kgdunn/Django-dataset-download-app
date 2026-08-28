@@ -1,5 +1,41 @@
 # Releases
 
+## v1.15.2
+
+Second docstring-accuracy pass. A repo-wide sweep across
+``datasetapp/views.py`` and ``datasetapp/models.py`` turned up six more
+docstrings/comments whose claims no longer matched the code. Documentation
+only; no runtime behaviour change.
+
+- **`datasetapp/views.py`** — `download_dataset` said a *"stray dot, an
+  upper-case letter, or a missing extension returns 404"*. The view
+  lowercases ``file_name`` **before** running the regex, so upper-case
+  input is silently normalised and accepted; underscores and stray dots
+  still 404. Docstring rewritten to match.
+- **`datasetapp/views.py`** — the `_DOWNLOAD_FILENAME_RE` comment claimed
+  the regex matches Django's ``SlugField`` (Dataset.slug). SlugField
+  permits underscores and mixed case; the regex does not. The comment now
+  states that the URL surface is intentionally tighter than the field,
+  because dataset slugs on this site never carry either.
+- **`datasetapp/views.py`** — `_csv_preview` said it "returns the header
+  row plus the first ``max_rows`` data rows"; it actually returns the
+  first ``max_rows + 1`` rows and is content-agnostic. The template treats
+  the first returned row as a header. Docstring corrected.
+- **`datasetapp/views.py`** — `about_dataset`'s docstring didn't mention
+  ``share_url`` (used by the detail page's Share button per v1.11.0) and
+  described the hit count / first-hit date without noting the different
+  scopes (``num_hits`` counts one ``DataFile``; ``first_hit_at``
+  aggregates across every ``DataFile`` of the dataset). Now spelled out.
+- **`datasetapp/models.py`** — `DataFile`'s "must obey the following
+  rules" list wasn't enforced by ``clean()`` for rule 1 (base name ==
+  slug). Rewritten as a convention plus a validated invariant, with a
+  pointer to what ``clean()`` and ``download_dataset`` actually check.
+- **`datasetapp/models.py`** — `Hit`'s class docstring described a
+  create-only, retain-forever row; the ``date_and_time`` field is
+  declared with ``auto_now=True`` (rewrites on every ``.save()``). The
+  invariant is upheld by "no one ever saves twice" — ``HitAdmin`` is
+  read-only, so no admin edit path exists. Now spelled out.
+
 ## v1.15.1
 
 Consolidated docstring/comment corrections, combining the still-applicable

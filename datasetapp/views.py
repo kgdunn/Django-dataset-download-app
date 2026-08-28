@@ -31,9 +31,13 @@ from .models import DataFile, Dataset, Hit, Tag
 
 log_file = logging.getLogger("datasetapp")
 
-# Public download URLs are restricted to a slug + 3-or-4-letter extension,
-# matching Dataset.slug (a SlugField) and DataFile.file_type (CSV / XLSX /
-# XML / MAT). Anything else returns 404 — earlier the view raised ValueError
+# Public download URLs are restricted to a hyphen-lowercase base name and
+# a 3-or-4-letter extension. Note this is *tighter* than Django's SlugField
+# (which also permits underscores and mixed case); dataset slugs on this
+# site never carry either, so tightening the URL surface is intentional.
+# The extension covers DataFile.file_type (CSV / XLSX / XML / MAT), and the
+# view lowercases the input first so an upper-case URL is accepted rather
+# than 404'd. Anything else returns 404 — earlier the view raised ValueError
 # on a missing/extra dot, which surfaced as a 500 and noise in the logs.
 _DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3,4}$")
 
@@ -138,8 +142,15 @@ def display_all(request):
 
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
-    """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or None
-    when there is nothing to preview.
+    """Returns the first ``max_rows + 1`` rows from a CSV ``DataFile``, or
+    ``None`` when there is nothing to preview.
+
+    The template renders the first returned row as the header and the rest
+    as data rows, so for a CSV whose first line really is a header this is
+    "header + ``max_rows`` data rows". For a headerless CSV, the first data
+    row is presented as a header — the function itself is content-agnostic
+    (``itertools.islice(reader, max_rows + 1)`` is all it does with the
+    reader).
 
     Returns ``None`` in exactly three cases: ``file_obj`` is ``None``, its
     ``file_type`` is not ``CSV``, or reading/decoding/parsing raises (logged
@@ -231,8 +242,12 @@ def about_dataset(request, dataset_name=None):
     ``DataFile`` rows, computes prev/next slugs from the homepage's
     slug-sorted ordering, builds an in-page CSV preview (skipped when the
     dataset is hidden), constructs the Python-quickstart download URL,
-    counts ``Hit`` rows for the primary file, and serializes the
-    seven-year weekly download series for the sparkline.
+    builds a ``share_url`` that the detail page's Share button
+    (Web Share API + clipboard fallback) reads, counts ``Hit`` rows for
+    the first ``DataFile`` returned by the (unordered) queryset, computes
+    ``first_hit_at`` across **every** ``DataFile`` belonging to the
+    dataset (not just that first file), and serializes the seven-year
+    weekly download series for the sparkline.
 
     Returns a ``TemplateResponse`` rendering
     ``datasetapp/dataset_info.html``. The view itself does not write a
@@ -310,11 +325,13 @@ def download_dataset(request, file_name=None):
     Serve one dataset file and record the download.
 
     ``file_name`` is the trailing component of the public URL
-    (``/file/<name>.<ext>``); it is lowercased and matched against
-    ``_DOWNLOAD_FILENAME_RE`` (``^[a-z0-9-]+\\.[a-z]{3,4}$``) before any
-    DB lookup, so a stray dot, an upper-case letter, or a missing
-    extension returns 404 instead of crashing with a ``ValueError``. The
-    base name resolves to ``Dataset.slug``; the extension (folded through
+    (``/file/<name>.<ext>``); it is lowercased first and then matched
+    against ``_DOWNLOAD_FILENAME_RE`` (``^[a-z0-9-]+\\.[a-z]{3,4}$``)
+    before any DB lookup. Because the lowercase step happens *before*
+    the regex, upper-case input is silently normalised and accepted; a
+    stray dot, an underscore, or a missing extension returns 404 instead
+    of crashing with a ``ValueError``. The base name resolves to
+    ``Dataset.slug``; the extension (folded through
     ``_DOWNLOAD_EXT_ALIASES`` so the legacy ``.xls`` still hits the now-
     ``XLSX`` row) selects the matching ``DataFile``. If either lookup
     fails the view returns a 404.

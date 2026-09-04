@@ -1,5 +1,39 @@
 # Releases
 
+## v1.15.2
+
+Second docstring-audit pass over `datasetapp/views.py` — four docstrings
+in the views module drifted out of sync with the code they describe.
+Documentation-only; no runtime behaviour change.
+
+- **`datasetapp/views.py`** — `_annotate_with_downloads` cited only
+  `display_by_tag` as a caller that joins the M2M `tags` relation, but
+  since the v1.8.0 homepage search landed, `display_all` also joins on
+  `tags__name` / `tags__description` when a `?q=` query is supplied. Both
+  callers now benefit from the `distinct=True` on the aggregate; the
+  docstring now names both.
+- **`datasetapp/views.py`** — `about_dataset`'s enumeration of the
+  context values it builds omitted `first_hit_at` (the earliest recorded
+  download timestamp across every `DataFile` of this dataset) and
+  `share_url` (the absolute canonical URL used by the Share button that
+  landed in v1.11.0). Both are now listed alongside `num_hits`,
+  `quickstart_url`, and the sparkline series.
+- **`datasetapp/views.py`** — `_csv_preview` listed
+  "reading/decoding/parsing raises" as one of the three cases that yield
+  `None`, but the read path calls
+  `bytes.decode("utf-8", errors="replace")`, which substitutes U+FFFD
+  rather than raising `UnicodeDecodeError`. Corrected to spell out that
+  decoding cannot raise; the three real cases are "no `file_obj`",
+  "not a CSV `file_type`", and "opening/reading the file or CSV parsing
+  raises".
+- **`datasetapp/views.py`** — `_search_filter` said only that it "ANDs
+  whitespace tokens", without mentioning that only the first
+  `_SEARCH_MAX_TOKENS` (8) tokens are used and any further tokens are
+  silently dropped. The cap materially changes what "matches" for
+  pathologically long queries; the docstring now names it.
+
+PATCH bump — docstring-only, no code path changes.
+
 ## v1.15.1
 
 Consolidated docstring/comment corrections, combining the still-applicable

@@ -58,7 +58,13 @@ _SEARCH_MAX_TOKENS = 8
 
 
 def _search_filter(query):
-    """Build a ``Q`` that ANDs whitespace tokens, ORed across each text field."""
+    """Build a ``Q`` that ANDs whitespace tokens, ORed across each text field.
+
+    Only the first ``_SEARCH_MAX_TOKENS`` (8) whitespace-separated tokens
+    are considered; anything beyond that is silently dropped so a runaway
+    query string cannot balloon the OR-of-LIKEs into an unbounded number
+    of joins.
+    """
     q = Q()
     for token in query.split()[:_SEARCH_MAX_TOKENS]:
         per_token = Q()
@@ -81,8 +87,10 @@ def _annotate_with_downloads(queryset):
     """Attach a ``num_downloads`` aggregate to each ``Dataset`` row.
 
     ``distinct=True`` is required because callers may have already joined
-    the M2M ``tags`` relation (``display_by_tag``); without it the tag
-    join would multiply the Hit count by the number of matching tags.
+    the M2M ``tags`` relation — ``display_by_tag`` always does, and
+    ``display_all`` does whenever a ``?q=`` search filter matches on
+    ``tags__name`` / ``tags__description``. Without ``distinct=True`` the
+    tag join would multiply the Hit count by the number of matching tags.
     """
     return queryset.annotate(
         num_downloads=Count("datafile__hit", distinct=True),
@@ -142,11 +150,14 @@ def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
     when there is nothing to preview.
 
     Returns ``None`` in exactly three cases: ``file_obj`` is ``None``, its
-    ``file_type`` is not ``CSV``, or reading/decoding/parsing raises (logged
-    as a warning). A file larger than ``max_bytes`` is **not** rejected — the
-    read is a single ``fh.read(max_bytes)``, so an oversize file is silently
-    truncated at that boundary and the preview is built from the leading
-    slice, which may end mid-row.
+    ``file_type`` is not ``CSV``, or opening/reading the file or CSV parsing
+    raises (logged as a warning). Decoding cannot raise because
+    ``bytes.decode("utf-8", errors="replace")`` substitutes U+FFFD for any
+    invalid byte instead of raising ``UnicodeDecodeError``. A file larger
+    than ``max_bytes`` is **not** rejected — the read is a single
+    ``fh.read(max_bytes)``, so an oversize file is silently truncated at
+    that boundary and the preview is built from the leading slice, which
+    may end mid-row.
 
     The CSV is parsed with the default ``csv.excel`` dialect — the previous
     ``csv.Sniffer().sniff(...)`` call was reachable from any visitor hitting
@@ -231,8 +242,11 @@ def about_dataset(request, dataset_name=None):
     ``DataFile`` rows, computes prev/next slugs from the homepage's
     slug-sorted ordering, builds an in-page CSV preview (skipped when the
     dataset is hidden), constructs the Python-quickstart download URL,
-    counts ``Hit`` rows for the primary file, and serializes the
-    seven-year weekly download series for the sparkline.
+    counts ``Hit`` rows for the first ``DataFile`` (``num_hits``) and
+    reads the earliest recorded download timestamp across every
+    ``DataFile`` of this dataset (``first_hit_at``), builds a canonical
+    absolute URL to this page for the Share button (``share_url``), and
+    serializes the seven-year weekly download series for the sparkline.
 
     Returns a ``TemplateResponse`` rendering
     ``datasetapp/dataset_info.html``. The view itself does not write a

@@ -88,9 +88,12 @@ def _annotate_with_downloads(queryset):
 
     ``distinct=True`` is required because callers may have already joined
     the M2M ``tags`` relation — ``display_by_tag`` always does, and
-    ``display_all`` does whenever a ``?q=`` search filter matches on
-    ``tags__name`` / ``tags__description``. Without ``distinct=True`` the
-    tag join would multiply the Hit count by the number of matching tags.
+    ``display_all`` does whenever a non-empty ``?q=`` search is applied
+    (the search filter always references ``tags__name`` /
+    ``tags__description``, so any query that reaches ``_search_filter``
+    triggers the join regardless of which field ends up matching).
+    Without ``distinct=True`` the tag join would multiply the Hit count
+    by the number of matching tags.
     """
     return queryset.annotate(
         num_downloads=Count("datafile__hit", distinct=True),
@@ -124,10 +127,13 @@ def display_by_tag(request, tag):
 
 def display_all(request):
     """
-    Displays all datasets in a table form, with brief summaries. An optional
-    ``?q=<terms>`` query string filters the list by substring across the
-    dataset name, description, data source, author name, and tag name /
-    description; whitespace splits the query into tokens that must all match.
+    Displays all visible (non-hidden) datasets in a table form, with brief
+    summaries. ``DatasetManager.get_queryset`` filters out ``is_hidden=True``
+    rows from every ``Dataset.objects`` caller, so the homepage never lists
+    them. An optional ``?q=<terms>`` query string filters the list by
+    substring across the dataset name, description, data source, author name,
+    and tag name / description; whitespace splits the query into tokens that
+    must all match.
     """
     raw = (request.GET.get("q") or "").strip()[:_SEARCH_MAX_LEN]
     qs = Dataset.objects.order_by("slug")
@@ -241,12 +247,15 @@ def about_dataset(request, dataset_name=None):
     inbound link). For a valid slug, the view collects the dataset's
     ``DataFile`` rows, computes prev/next slugs from the homepage's
     slug-sorted ordering, builds an in-page CSV preview (skipped when the
-    dataset is hidden), constructs the Python-quickstart download URL,
-    counts ``Hit`` rows for the first ``DataFile`` (``num_hits``) and
-    reads the earliest recorded download timestamp across every
-    ``DataFile`` of this dataset (``first_hit_at``), builds a canonical
-    absolute URL to this page for the Share button (``share_url``), and
-    serializes the seven-year weekly download series for the sparkline.
+    dataset is hidden), constructs the Python-quickstart download URL
+    only when a CSV ``DataFile`` exists **and** the dataset is not
+    hidden (otherwise ``quickstart_url`` stays ``None`` and the template
+    omits the quickstart panel), counts ``Hit`` rows for the first
+    ``DataFile`` (``num_hits``) and reads the earliest recorded
+    download timestamp across every ``DataFile`` of this dataset
+    (``first_hit_at``), builds a canonical absolute URL to this page
+    for the Share button (``share_url``), and serializes the seven-year
+    weekly download series for the sparkline.
 
     Returns a ``TemplateResponse`` rendering
     ``datasetapp/dataset_info.html``. The view itself does not write a

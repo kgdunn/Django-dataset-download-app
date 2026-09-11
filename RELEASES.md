@@ -1,5 +1,42 @@
 # Releases
 
+## v1.15.3
+
+Third docstring-audit pass — four more docstrings in `datasetapp/`
+drifted from what the code actually does. Documentation-only; no runtime
+behaviour change.
+
+- **`datasetapp/views.py`** — `display_all`'s docstring said "Displays
+  all datasets", but the queryset is `Dataset.objects.order_by("slug")`
+  and `DatasetManager.get_queryset` filters out `is_hidden=True` rows
+  from every caller of `Dataset.objects` (gotcha #1). The docstring now
+  says "all visible (non-hidden) datasets".
+- **`datasetapp/views.py`** — `_annotate_with_downloads`'s docstring
+  said `display_all` joins the M2M `tags` relation "whenever a `?q=`
+  search matches on `tags__name` / `tags__description`", but
+  `_search_filter` unconditionally ORs those two fields into every
+  token's per-field predicate — the join fires whenever the search is
+  applied at all, regardless of which field ends up matching. Corrected
+  to "whenever a non-empty `?q=` search is applied (the search filter
+  always references `tags__name` / `tags__description`)".
+- **`datasetapp/views.py`** — `about_dataset`'s docstring said the view
+  "constructs the Python-quickstart download URL" unconditionally, but
+  the view only builds `quickstart_url` when a CSV `DataFile` exists
+  **and** the dataset is not hidden; otherwise it stays `None` and the
+  template omits the quickstart panel. The docstring now names both
+  conditions.
+- **`datasetapp/models.py`** — `Hit`'s docstring said the timestamp is
+  the download time, but `date_and_time = models.DateTimeField(auto_now=True)`
+  refreshes on every save, not just on insert. In practice the row is
+  only ever inserted (never updated) — `HitAdmin` locks both fields
+  `readonly` for exactly that reason — so the observed timestamp is the
+  download time. The docstring now names the field's `auto_now=True`
+  behaviour explicitly and notes the append-only assumption enforced by
+  `HitAdmin`. Switching to `auto_now_add=True` is a schema change and
+  deliberately out of scope for this docs-only PR.
+
+PATCH bump — docstring-only, no code path changes.
+
 ## v1.15.2
 
 Second docstring-audit pass over `datasetapp/views.py` — four docstrings

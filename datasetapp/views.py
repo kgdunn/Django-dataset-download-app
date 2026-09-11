@@ -247,12 +247,15 @@ def about_dataset(request, dataset_name=None):
     inbound link). For a valid slug, the view collects the dataset's
     ``DataFile`` rows, computes prev/next slugs from the homepage's
     slug-sorted ordering, builds an in-page CSV preview (skipped when the
-    dataset is hidden), constructs the Python-quickstart download URL,
-    counts ``Hit`` rows for the first ``DataFile`` (``num_hits``) and
-    reads the earliest recorded download timestamp across every
-    ``DataFile`` of this dataset (``first_hit_at``), builds a canonical
-    absolute URL to this page for the Share button (``share_url``), and
-    serializes the seven-year weekly download series for the sparkline.
+    dataset is hidden), constructs the Python-quickstart download URL
+    only when a CSV ``DataFile`` exists **and** the dataset is not
+    hidden (otherwise ``quickstart_url`` stays ``None`` and the template
+    omits the quickstart panel), counts ``Hit`` rows for the first
+    ``DataFile`` (``num_hits``) and reads the earliest recorded
+    download timestamp across every ``DataFile`` of this dataset
+    (``first_hit_at``), builds a canonical absolute URL to this page
+    for the Share button (``share_url``), and serializes the seven-year
+    weekly download series for the sparkline.
 
     Returns a ``TemplateResponse`` rendering
     ``datasetapp/dataset_info.html``. The view itself does not write a

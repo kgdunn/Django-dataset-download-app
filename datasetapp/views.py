@@ -88,9 +88,12 @@ def _annotate_with_downloads(queryset):
 
     ``distinct=True`` is required because callers may have already joined
     the M2M ``tags`` relation — ``display_by_tag`` always does, and
-    ``display_all`` does whenever a ``?q=`` search filter matches on
-    ``tags__name`` / ``tags__description``. Without ``distinct=True`` the
-    tag join would multiply the Hit count by the number of matching tags.
+    ``display_all`` does whenever a non-empty ``?q=`` search is applied
+    (the search filter always references ``tags__name`` /
+    ``tags__description``, so any query that reaches ``_search_filter``
+    triggers the join regardless of which field ends up matching).
+    Without ``distinct=True`` the tag join would multiply the Hit count
+    by the number of matching tags.
     """
     return queryset.annotate(
         num_downloads=Count("datafile__hit", distinct=True),

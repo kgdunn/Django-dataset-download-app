@@ -124,10 +124,13 @@ def display_by_tag(request, tag):
 
 def display_all(request):
     """
-    Displays all datasets in a table form, with brief summaries. An optional
-    ``?q=<terms>`` query string filters the list by substring across the
-    dataset name, description, data source, author name, and tag name /
-    description; whitespace splits the query into tokens that must all match.
+    Displays all visible (non-hidden) datasets in a table form, with brief
+    summaries. ``DatasetManager.get_queryset`` filters out ``is_hidden=True``
+    rows from every ``Dataset.objects`` caller, so the homepage never lists
+    them. An optional ``?q=<terms>`` query string filters the list by
+    substring across the dataset name, description, data source, author name,
+    and tag name / description; whitespace splits the query into tokens that
+    must all match.
     """
     raw = (request.GET.get("q") or "").strip()[:_SEARCH_MAX_LEN]
     qs = Dataset.objects.order_by("slug")

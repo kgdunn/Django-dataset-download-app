@@ -176,6 +176,51 @@ def test_home_without_search_renders_intro_message(client, dataset):
     assert "result for" not in body
 
 
+# The list pages render descriptions through |summarise (v1.16.0). The
+# previous |striptags fused block-level markup into run-on words and printed
+# "None" for a dataset with no dimensions recorded.
+
+
+@pytest.fixture
+def marked_up_dataset(db):
+    return Dataset.objects.create(
+        name="Batch polymerization",
+        slug="batch-polymerization",
+        description=(
+            "<p>Variables 1, 2, 3: reactor temperatures</p>"
+            "<ul><li>variables 6 and 7 are heating media</li></ul>"
+        ),
+        author_name="A. N. Other",
+        usage_restrictions="None",
+        data_source="A paper.",
+    )
+
+
+@pytest.mark.parametrize(
+    "url_name,args",
+    [("datasetapp:dataset-home-page", []), ("datasetapp:dataset-by-tag", ["batch"])],
+)
+def test_list_pages_do_not_fuse_block_markup(client, marked_up_dataset, url_name, args):
+    if args:
+        marked_up_dataset.tags.add(
+            Tag.objects.create(name="batch", description="Batch process data")
+        )
+    body = client.get(reverse(url_name, args=args)).content.decode()
+    assert "temperaturesvariables" not in body
+    assert "reactor temperatures; variables 6" in body
+
+
+def test_list_page_omits_none_for_missing_rows_and_cols(client, marked_up_dataset):
+    assert marked_up_dataset.rows is None
+    body = client.get(reverse("datasetapp:dataset-home-page")).content.decode()
+    assert (
+        '<td class="dataset-rows" data-sort-key="rows" data-sort-value=""></td>' in body
+    )
+    assert (
+        '<td class="dataset-cols" data-sort-key="cols" data-sort-value=""></td>' in body
+    )
+
+
 def test_about_known_slug_returns_200(client, dataset, csv_file):
     response = client.get(
         reverse("datasetapp:dataset-about-a-dataset", args=[dataset.slug])

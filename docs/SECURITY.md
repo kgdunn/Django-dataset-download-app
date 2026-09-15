@@ -40,6 +40,28 @@ generic CVSS score.
 | 12 | Low     | `Dockerfile:6`                                           | `COPY --from=ghcr.io/astral-sh/uv:latest` — floating tag.                                                                                                                                        | **Fixed in v1.5.0** — pinned to `ghcr.io/astral-sh/uv:0.8.17`. |
 | 13 | Info    | `pyproject.toml`                                         | `psycopg2-binary`, `python-dotenv`, `gunicorn` had no lower bounds; `pip-audit` not in dev group.                                                                                                | **Fixed in v1.5.0** — lower bounds added; `pip-audit` in dev group + non-blocking CI step. |
 
+### Markup-rendering paths (v1.16.0)
+
+Two filters in `datasetapp/templatetags/extra_tags.py` consume admin-authored
+markup, with deliberately different escaping contracts:
+
+- `sanitise_markup` — used where the markup should *render* (the detail page).
+  Returns `mark_safe`, so bleach's allowlist is the only thing between a
+  compromised admin and stored XSS. This is finding 1 above.
+- `summarise` — used where only flat text is wanted (the homepage and
+  `/tag/<slug>` list). Splits on block boundaries, strips every remaining tag,
+  unescapes entities, and returns a plain `str`. It never calls `mark_safe`,
+  so Django's autoescaping applies to the result: an admin who types the
+  entity `&lt;script&gt;` gets it unescaped to text by the filter and escaped
+  straight back on output. Pinned by
+  `test_output_is_escaped_by_the_template` in
+  `datasetapp/tests/test_templatetags.py`.
+
+A third path, `|striptags`, rendered the list pages before v1.16.0. It was not
+an XSS risk (its output is escaped too) but it mangled what visitors read: it
+deletes tags without substituting whitespace, and it leaves entities alone to
+be escaped a second time. See gotcha 12 in `CLAUDE.md`.
+
 ### Already-correct findings (no change needed)
 
 - ORM-only DB access — no `.raw()` / `.extra()` / cursor strings; SQL injection surface is zero.
@@ -264,7 +286,7 @@ attached to the audit, not to a transient PR description.
 
 | Concern                          | File                                                       |
 |----------------------------------|------------------------------------------------------------|
-| HTML sanitisation (bleach)       | `datasetapp/templatetags/extra_tags.py`                    |
+| HTML sanitisation + flattening   | `datasetapp/templatetags/extra_tags.py` (`sanitise_markup`, `summarise`) |
 | Filename validation              | `datasetapp/views.py` (`_DOWNLOAD_FILENAME_RE`, `download_dataset`) |
 | CSV preview safety               | `datasetapp/views.py` (`_csv_preview`)                     |
 | Upload validation                | `datasetapp/models.py` (`DataFile.clean`)                  |
@@ -272,4 +294,4 @@ attached to the audit, not to a transient PR description.
 | Security headers                 | `openmv/middleware.py`                                     |
 | Cookie + transport flags         | `openmv/settings/prod.py`                                  |
 | Upload size limits               | `openmv/settings/base.py`                                  |
-| Regression tests                 | `datasetapp/tests/test_security.py`                        |
+| Regression tests                 | `datasetapp/tests/test_security.py`, `datasetapp/tests/test_templatetags.py` |

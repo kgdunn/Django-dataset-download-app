@@ -62,9 +62,11 @@ Datasets{% endif %}{% endblock %}
         {% spaceless %}
         <tr class="dataset-row">
             <td data-sort-key="name" data-sort-value="{{ dataset.name|lower }}"><a href="{% url 'datasetapp:dataset-about-a-dataset' dataset.slug %}">{{ dataset.name }}</a></td>
-            <td data-sort-key="desc" data-sort-value="{{ dataset.description|striptags|lower }}">{{dataset.description|striptags}}</td>
-            <td class="dataset-rows" data-sort-key="rows" data-sort-value="{{ dataset.rows }}">{{dataset.rows}}</td>
-            <td class="dataset-cols" data-sort-key="cols" data-sort-value="{{ dataset.cols }}">{{dataset.cols}}</td>
+            {% with summary=dataset.description|summarise:40 %}
+            <td class="dataset-desc" data-sort-key="desc" data-sort-value="{{ summary|lower }}">{{ summary }}</td>
+            {% endwith %}
+            <td class="dataset-rows" data-sort-key="rows" data-sort-value="{{ dataset.rows|default_if_none:'' }}">{{ dataset.rows|default_if_none:'' }}</td>
+            <td class="dataset-cols" data-sort-key="cols" data-sort-value="{{ dataset.cols|default_if_none:'' }}">{{ dataset.cols|default_if_none:'' }}</td>
             <td class="dataset-downloads" data-sort-key="downloads" data-sort-value="{{ dataset.num_downloads|default:0 }}">{{ dataset.num_downloads|default:0 }}</td>
             <td data-sort-key="tags" data-sort-value="{% for tag in dataset.tags.all %}{{ tag|lower }} {% endfor %}">
                 <div class="tag-list">

@@ -1,5 +1,47 @@
 # Releases
 
+## v1.16.0
+
+Readable dataset descriptions on the homepage and the `/tag/<slug>` pages.
+
+Both list pages rendered `Dataset.description` through `|striptags`. Django's
+`strip_tags` removes tags without substituting whitespace, so an admin's
+`<li>` list arrived on the page as run-on text — `"...reactor
+temperaturesvariables 6 and 7 are..."` — and the entire multi-paragraph
+description was dumped into a single table cell, giving every row a different
+height. Entities were left untouched by `striptags` and then escaped a second
+time on output, so a description containing `&amp;` reached the visitor as a
+literal `&amp;`.
+
+- **`datasetapp/templatetags/extra_tags.py`** — new `summarise` filter. It
+  splits the markup on block boundaries *before* stripping tags, strips the
+  remaining inline tags per fragment, unescapes entities, rejoins the
+  fragments with `; ` where the preceding one does not already end in
+  punctuation, collapses whitespace, and truncates to a word budget. It
+  returns a plain `str`, not `mark_safe`, so autoescaping still applies to
+  the flattened text.
+- **`datasetapp/templates/datasetapp/all_datasets.html`** — the description
+  cell uses `summarise:40`, bound once with `{% with %}` and reused for the
+  cell's `data-sort-value`, so the Description column sorts on the text the
+  visitor can read rather than on the full hidden description.
+- **`datasetapp/templates/datasetapp/all_datasets.html`** — `rows` and `cols`
+  are nullable, and `{{ dataset.rows }}` rendered the string `None` for a
+  dataset with no dimensions recorded. The mobile card layout prefixed that
+  with its CSS label, so the card read `ROWS None`. Both now use
+  `default_if_none:""`.
+- **`datasetapp/templates/datasetapp/base.html`** — the description cell is
+  clamped to three lines (four in the mobile cards) as a backstop, and an
+  empty rows / cols cell is hidden on mobile so no stranded label remains.
+- **`datasetapp/tests/test_templatetags.py`** — new file: thirteen tests
+  covering fusion, separators, inline tags, entities, whitespace,
+  truncation, empty input, and template-level escaping.
+- **`datasetapp/tests/test_views.py`** — both list pages are asserted to be
+  free of the fused string and of `None` dimension cells.
+
+The detail page is unchanged: it still renders the full description through
+`sanitise_markup`, with the admin's lists and paragraphs intact.
+
+
 ## v1.15.2
 
 Second docstring-audit pass over `datasetapp/views.py` — four docstrings

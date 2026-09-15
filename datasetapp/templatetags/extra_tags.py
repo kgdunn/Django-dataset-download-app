@@ -1,7 +1,12 @@
+import re
+from html import unescape
+
 import bleach
 from django import template
 from django.template.defaultfilters import stringfilter
+from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
+from django.utils.text import Truncator
 
 register = template.Library()
 
@@ -62,6 +67,72 @@ def sanitise_markup(value):
         strip=True,
     )
     return mark_safe(cleaned)  # noqa: S308 — sanitised one line above
+
+
+# Tags that introduce a line break when the browser renders them. Django's
+# strip_tags() deletes tags without substituting anything, so "<li>a</li>
+# <li>b</li>" flattens to "ab" — splitting on these first is what keeps the
+# words apart. Inline tags (<b>, <a>, <sup>, …) are deliberately absent: they
+# sit mid-sentence and are removed by strip_tags() without a separator.
+_BLOCK_SPLIT_RE = re.compile(
+    r"</?(?:p|div|br|hr|li|ul|ol|dl|dt|dd|table|thead|tbody|tr|td|th"
+    r"|h[1-6]|blockquote|pre|section|article)\b[^>]*>",
+    re.IGNORECASE,
+)
+_WHITESPACE_RE = re.compile(r"\s+")
+# A fragment already ending in one of these reads fine followed by a space;
+# anything else gets a semicolon so two list items don't run together.
+_SENTENCE_ENDINGS = ".?!:;,"
+
+
+def _flatten(markup):
+    """Collapses block-level HTML into a single line of readable prose.
+
+    Splits ``markup`` on block boundaries, strips any remaining inline tags
+    from each fragment, and rejoins the non-empty fragments, inserting ``;``
+    where the preceding fragment does not already end in punctuation. HTML
+    entities are unescaped so the template's autoescaping renders ``&amp;``
+    as ``&`` rather than double-escaping it to a literal ``&amp;``.
+
+    :param str markup: admin-authored HTML, e.g. ``Dataset.description``.
+    :returns: one whitespace-normalised line of plain text.
+    :rtype: str
+    """
+    fragments = []
+    for chunk in _BLOCK_SPLIT_RE.split(markup):
+        text = unescape(strip_tags(chunk)).strip()
+        if not text:
+            continue
+        if fragments and fragments[-1][-1] not in _SENTENCE_ENDINGS:
+            fragments[-1] += ";"
+        fragments.append(text)
+    return _WHITESPACE_RE.sub(" ", " ".join(fragments)).strip()
+
+
+@register.filter(name="summarise")
+def summarise(value, words=40):
+    """Render admin-authored HTML as a short plain-text teaser.
+
+    For list pages, where the full description is neither wanted nor
+    renderable inside a table cell. The detail page keeps the real markup via
+    ``sanitise_markup``; this filter is its flattened, truncated counterpart.
+
+    The return value is a plain ``str``, *not* ``mark_safe``: every tag has
+    been removed, so Django's autoescaping is exactly what should happen to
+    what is left.
+
+    :param value: the markup to summarise; ``None`` returns ``""``.
+    :param words: word budget before an ellipsis is appended.
+    :type words: int or str
+    :rtype: str
+
+    Example::
+
+        {{ dataset.description|summarise:40 }}
+    """
+    if not value:
+        return ""
+    return Truncator(_flatten(str(value))).words(int(words), truncate=" \u2026")
 
 
 @stringfilter

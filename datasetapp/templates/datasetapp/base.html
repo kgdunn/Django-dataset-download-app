@@ -435,6 +435,16 @@ p  { margin: 0 0 var(--sp-3) 0; }
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
     text-align: right; color: var(--color-text-muted);
 }
+/* The description cell is a teaser: |summarise flattens the admin's block
+   markup to one line and truncates it. The clamp is the backstop, so a
+   description of unusually long words can't stretch its row. */
+.dataset-table tbody td.dataset-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
 
 @media (max-width: 767px) {
     .dataset-table, .dataset-table tbody, .dataset-table tr,
@@ -469,6 +479,11 @@ p  { margin: 0 0 var(--sp-3) 0; }
         display: inline-block; margin-right: var(--sp-4); text-align: left;
     }
     .dataset-table tbody td.dataset-downloads { display: none; }
+    .dataset-table tbody td.dataset-desc { -webkit-line-clamp: 4; line-clamp: 4; }
+    /* rows/cols are nullable; an empty cell would otherwise still show its
+       ::before label, reading as a stranded "ROWS". */
+    .dataset-table tbody td.dataset-rows:empty,
+    .dataset-table tbody td.dataset-cols:empty { display: none; }
 }
 
 /* Homepage search bar */

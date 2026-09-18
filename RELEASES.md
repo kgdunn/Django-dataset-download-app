@@ -1,5 +1,12 @@
 # Releases
 
+## v1.16.1
+
+Docstring fix on `DataFile` (`datasetapp/models.py`): rule 2 now notes that the
+`FileExtensionValidator` on `link_to_file` also accepts `.xls` as a legacy
+alias for `.xlsx`, matching the actual validator allowlist. No behaviour
+change.
+
 ## v1.16.0
 
 Readable dataset descriptions on the homepage and the `/tag/<slug>` pages.

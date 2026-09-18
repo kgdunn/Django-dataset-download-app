@@ -108,6 +108,9 @@ class DataFile(models.Model):
 
         1. The file_name must be the same as the ``Dataset`` slug field
         2. The extension must be one of the entries in ``file_type_choice``
+           (``.csv``, ``.xlsx``, ``.xml``, ``.mat``). The ``FileExtensionValidator``
+           on ``link_to_file`` additionally accepts ``.xls`` as a legacy alias for
+           ``.xlsx`` so pre-#113 uploads and links keep resolving.
 
     """
 

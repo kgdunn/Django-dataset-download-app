@@ -15,6 +15,7 @@ import itertools
 import json
 import logging
 import re
+from functools import wraps
 
 # Django imports
 from django.core.cache import cache
@@ -40,6 +41,56 @@ _DOWNLOAD_FILENAME_RE = re.compile(r"^[a-z0-9-]+\.[a-z]{3,4}$")
 # Legacy ``/file/<slug>.xls`` links (the file_type was "XLS" before issue
 # #113) still resolve to the now-"XLSX" DataFile row.
 _DOWNLOAD_EXT_ALIASES = {"xls": "xlsx"}
+
+# Cross-origin reads of ``/file/*`` (browser ``fetch()`` of a CSV from
+# another site: notebooks, JupyterLite, Observable, teaching pages). The
+# files are public and no cookie or credential is ever honoured on this
+# path, so the wildcard origin is safe; ``Allow-Credentials`` is
+# deliberately never sent, which is what keeps ``*`` harmless.
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    # Without this, JS can read the body but not the filename header.
+    "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
+    # Lets pages that opt into cross-origin isolation (COEP) load the file.
+    "Cross-Origin-Resource-Policy": "cross-origin",
+}
+_CORS_PREFLIGHT_HEADERS = {
+    "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+}
+
+
+def _set_headers(response, headers):
+    for name, value in headers.items():
+        response[name] = value
+
+
+def allow_cross_origin(view):
+    """
+    Add CORS headers to every response from ``view``, 404s included.
+
+    Headers go on error responses too, so a cross-origin caller sees the
+    real 404 rather than an opaque "CORS error". An ``OPTIONS`` preflight
+    (sent when the caller adds a non-simple header such as ``Range``) is
+    answered here with a 204 and never reaches ``view``, so it cannot
+    record a ``Hit``.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if request.method == "OPTIONS":
+            response = HttpResponse(status=204)
+            _set_headers(response, _CORS_PREFLIGHT_HEADERS)
+            requested = request.headers.get("Access-Control-Request-Headers")
+            if requested:
+                response["Access-Control-Allow-Headers"] = requested
+        else:
+            response = view(request, *args, **kwargs)
+        _set_headers(response, _CORS_HEADERS)
+        return response
+
+    return wrapper
+
 
 # Homepage free-text search (issue #94). ``icontains`` keeps SQLite dev and
 # Postgres prod in lock-step; the catalogue is small enough that a six-field
@@ -319,6 +370,7 @@ def about_dataset(request, dataset_name=None):
     return TemplateResponse(request, "datasetapp/dataset_info.html", context)
 
 
+@allow_cross_origin
 def download_dataset(request, file_name=None):
     """
     Serve one dataset file and record the download.
@@ -345,6 +397,9 @@ def download_dataset(request, file_name=None):
     implementation returned a 302 to ``/media/datasets/cheddar-cheese.csv``,
     which doubled the surface exposed to Cloudflare's Bot Fight Mode and
     caused 403s for ``urllib`` / ``pandas.read_csv`` clients (issue #86).
+
+    ``@allow_cross_origin`` adds CORS headers so a browser on another
+    origin can ``fetch()`` the file directly.
     """
     # django-name='dataset-download'
     file_name = (file_name or "").lower()

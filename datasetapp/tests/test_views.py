@@ -433,3 +433,45 @@ def test_about_includes_download_series_for_sparkline(client, dataset, csv_file)
     assert all(len(point) == 2 for point in series)
     # One hit landed in the most recent week and is reported as a weekly total.
     assert sum(point[1] for point in series) == 1
+
+
+def test_download_sends_cors_headers(client, dataset, csv_file):
+    response = client.get(
+        reverse("datasetapp:dataset-download", args=["iris.csv"]),
+        HTTP_ORIGIN="https://example.org",
+    )
+    assert response.status_code == 200
+    assert response["Access-Control-Allow-Origin"] == "*"
+    assert "Content-Disposition" in response["Access-Control-Expose-Headers"]
+    assert response["Cross-Origin-Resource-Policy"] == "cross-origin"
+    # A wildcard origin must never be paired with credentials.
+    assert "Access-Control-Allow-Credentials" not in response
+
+
+def test_download_404_still_sends_cors_headers(client, db):
+    # Otherwise a cross-origin caller sees an opaque CORS error, not the 404.
+    response = client.get(reverse("datasetapp:dataset-download", args=["nope.csv"]))
+    assert response.status_code == 404
+    assert response["Access-Control-Allow-Origin"] == "*"
+
+
+def test_download_preflight_returns_204_without_hit(client, dataset, csv_file):
+    before = Hit.objects.count()
+    response = client.options(
+        reverse("datasetapp:dataset-download", args=["iris.csv"]),
+        HTTP_ORIGIN="https://example.org",
+        HTTP_ACCESS_CONTROL_REQUEST_METHOD="GET",
+        HTTP_ACCESS_CONTROL_REQUEST_HEADERS="range",
+    )
+    assert response.status_code == 204
+    assert response["Access-Control-Allow-Origin"] == "*"
+    assert response["Access-Control-Allow-Headers"] == "range"
+    assert "GET" in response["Access-Control-Allow-Methods"]
+    assert Hit.objects.count() == before
+
+
+def test_html_pages_do_not_send_cors_headers(client, dataset):
+    # CORS is scoped to /file/*; the HTML pages stay same-origin only.
+    response = client.get(reverse("datasetapp:dataset-home-page"))
+    assert response.status_code == 200
+    assert "Access-Control-Allow-Origin" not in response

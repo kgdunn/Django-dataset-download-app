@@ -62,6 +62,17 @@ an XSS risk (its output is escaped too) but it mangled what visitors read: it
 deletes tags without substituting whitespace, and it leaves entities alone to
 be escaped a second time. See gotcha 12 in `CLAUDE.md`.
 
+### Cross-origin reads of `/file/*` (v1.17.0)
+
+`download_dataset` sends `Access-Control-Allow-Origin: *` (via the
+`allow_cross_origin` decorator in `datasetapp/views.py`) so browser code on any
+origin can read a dataset. This is safe because the files are public and the
+path never sends `Access-Control-Allow-Credentials`, so a browser will not
+attach cookies to a cross-origin read, and nothing on this path depends on a
+session. CORS is scoped to that one view: the HTML pages and `/admin/` send no
+CORS headers. Pinned by `test_download_sends_cors_headers` and
+`test_html_pages_do_not_send_cors_headers` in `datasetapp/tests/test_views.py`.
+
 ### Already-correct findings (no change needed)
 
 - ORM-only DB access — no `.raw()` / `.extra()` / cursor strings; SQL injection surface is zero.

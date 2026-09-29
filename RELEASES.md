@@ -1,5 +1,24 @@
 # Releases
 
+## v1.17.0
+
+CORS on `/file/*`, so a browser page on another origin can `fetch()` a dataset
+directly (JupyterLite / Pyodide notebooks, Observable, teaching pages).
+Previously the response carried no `Access-Control-Allow-Origin`, and the
+browser blocked the read even though the download itself succeeded.
+
+- **`datasetapp/views.py`** - new `allow_cross_origin` decorator on
+  `download_dataset`. Every response, 404s included, gets
+  `Access-Control-Allow-Origin: *`,
+  `Access-Control-Expose-Headers: Content-Disposition, Content-Length` and
+  `Cross-Origin-Resource-Policy: cross-origin`. An `OPTIONS` preflight
+  (triggered by a non-simple request header such as `Range`) is answered with a
+  204 and never reaches the view, so it does not record a `Hit`.
+- `Access-Control-Allow-Credentials` is never sent, so the wildcard origin
+  cannot be used to read anything cookie-scoped. The HTML pages are unchanged
+  and remain same-origin only.
+- Caddy's direct `/media/*` route is not covered; `/file/*` is the public URL.
+
 ## v1.16.0
 
 Readable dataset descriptions on the homepage and the `/tag/<slug>` pages.

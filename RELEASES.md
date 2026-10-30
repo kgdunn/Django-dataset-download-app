@@ -1,5 +1,24 @@
 # Releases
 
+## v1.17.1
+
+Scheduled docstring-audit pass: realign four docstrings that no longer matched
+the code they describe. No behaviour change.
+
+- `datasetapp/views.py::display_all` — note that the homepage lists only
+  visible (non-hidden) datasets, which is what `DatasetManager.get_queryset`
+  enforces for every `Dataset.objects` caller (CLAUDE.md gotcha #1).
+- `datasetapp/views.py::_annotate_with_downloads` — the M2M `tags` join fires
+  on any non-empty `?q=`, not just queries that happen to match on tag text,
+  because `_search_filter` always references `tags__name` /
+  `tags__description`.
+- `datasetapp/views.py::about_dataset` — the Python quickstart URL is built
+  only when a CSV `DataFile` exists **and** the dataset is not hidden; it
+  stays `None` otherwise and the template drops the panel.
+- `datasetapp/models.py::Hit` — spell out that `date_and_time` is
+  `auto_now=True`, which refreshes on every `save()`, so the row is safe to
+  treat as a download timestamp only because the table is append-only.
+
 ## v1.17.0
 
 CORS on `/file/*`, so a browser page on another origin can `fetch()` a dataset

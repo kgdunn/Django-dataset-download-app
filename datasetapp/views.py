@@ -139,9 +139,11 @@ def _annotate_with_downloads(queryset):
 
     ``distinct=True`` is required because callers may have already joined
     the M2M ``tags`` relation — ``display_by_tag`` always does, and
-    ``display_all`` does whenever a ``?q=`` search filter matches on
-    ``tags__name`` / ``tags__description``. Without ``distinct=True`` the
-    tag join would multiply the Hit count by the number of matching tags.
+    ``display_all`` does whenever a ``?q=`` search is present, because
+    every token's per-field OR references ``tags__name`` /
+    ``tags__description`` (they are part of ``_SEARCH_FIELDS``). Without
+    ``distinct=True`` the tag join would multiply the Hit count by the
+    number of matching tags.
     """
     return queryset.annotate(
         num_downloads=Count("datafile__hit", distinct=True),
@@ -197,12 +199,13 @@ def display_all(request):
 
 
 def _csv_preview(file_obj, max_rows=10, max_bytes=100 * 1024):
-    """Returns the header row plus the first ``max_rows`` data rows from a CSV ``DataFile``, or None
-    when there is nothing to preview.
+    """Returns up to ``max_rows + 1`` rows from a CSV ``DataFile`` (treated by callers as a header
+    row plus ``max_rows`` data rows), or ``None`` when the file cannot be read.
 
     Returns ``None`` in exactly three cases: ``file_obj`` is ``None``, its
     ``file_type`` is not ``CSV``, or opening/reading the file or CSV parsing
-    raises (logged as a warning). Decoding cannot raise because
+    raises (logged as a warning). An otherwise-valid CSV that happens to be
+    empty returns ``[]``, not ``None``. Decoding cannot raise because
     ``bytes.decode("utf-8", errors="replace")`` substitutes U+FFFD for any
     invalid byte instead of raising ``UnicodeDecodeError``. A file larger
     than ``max_bytes`` is **not** rejected — the read is a single
@@ -287,12 +290,15 @@ def about_dataset(request, dataset_name=None):
     Render the detail page for one dataset.
 
     ``dataset_name`` is the URL slug; it is lowercased and looked up
-    against ``Dataset.slug``. An unknown slug logs an error and redirects
-    to the homepage rather than 404 (legacy behaviour kept for any stale
-    inbound link). For a valid slug, the view collects the dataset's
-    ``DataFile`` rows, computes prev/next slugs from the homepage's
-    slug-sorted ordering, builds an in-page CSV preview (skipped when the
-    dataset is hidden), constructs the Python-quickstart download URL,
+    against ``Dataset.slug``. An unknown slug — or a slug belonging to a
+    hidden dataset, since ``DatasetManager.get_queryset`` filters those
+    out — logs an error and redirects to the homepage rather than 404
+    (legacy behaviour kept for any stale inbound link). For a valid slug,
+    the view collects the dataset's ``DataFile`` rows, computes prev/next
+    slugs from the homepage's slug-sorted ordering, builds an in-page CSV
+    preview (the ``not ds.is_hidden`` guard is defence in depth; the
+    manager filter above already prevents a hidden dataset from being
+    reached here), constructs the Python-quickstart download URL,
     counts ``Hit`` rows for the first ``DataFile`` (``num_hits``) and
     reads the earliest recorded download timestamp across every
     ``DataFile`` of this dataset (``first_hit_at``), builds a canonical

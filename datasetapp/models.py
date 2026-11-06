@@ -107,7 +107,10 @@ class DataFile(models.Model):
     Note: file data file must obey the following rules:
 
         1. The file_name must be the same as the ``Dataset`` slug field
-        2. The extension must be one of the entries in ``file_type_choice``
+        2. The extension must be one of ``csv``, ``xls``, ``xlsx``, ``xml``
+           or ``mat`` — the legacy ``.xls`` is kept as an alias for the
+           ``XLSX`` ``file_type`` (issue #113); every other extension maps
+           one-to-one onto the ``file_type_choice`` entry of the same name.
 
     """
 

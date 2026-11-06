@@ -121,7 +121,8 @@ def summarise(value, words=40):
     been removed, so Django's autoescaping is exactly what should happen to
     what is left.
 
-    :param value: the markup to summarise; ``None`` returns ``""``.
+    :param value: the markup to summarise; any falsy value (``None``,
+        ``""``, …) returns ``""``.
     :param words: word budget before an ellipsis is appended.
     :type words: int or str
     :rtype: str

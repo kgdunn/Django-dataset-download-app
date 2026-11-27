@@ -1,5 +1,23 @@
 # Releases
 
+## v1.17.1
+
+Docstring fix in `datasetapp/views.py`. `download_dataset`'s docstring listed
+"an upper-case letter" as a trigger for a 404 response, alongside a stray dot
+and a missing extension. That claim is wrong: the view `.lower()`s the URL
+segment on the very first line and only then runs the regex, so any uppercase
+letter in the URL is normalised to lowercase before the regex sees it and
+passes straight through. The corrected text spells out that the lowercasing
+happens first and that uppercase is explicitly not a 404 trigger.
+
+- **`datasetapp/views.py`** - reworded the regex-rejection paragraph in
+  `download_dataset`'s docstring. No behaviour change; the regex and the
+  `.lower()` call are untouched. The `iris.CSV` parametrisation in
+  `tests/test_security.py::test_download_dataset_returns_404_not_500_for_bad_filenames`
+  already documents this behaviour correctly in its inline comment ("still
+  passes regex after `.lower()`"); the test keeps passing because that URL
+  has no matching `Dataset` row, not because the regex rejects it.
+
 ## v1.17.0
 
 CORS on `/file/*`, so a browser page on another origin can `fetch()` a dataset

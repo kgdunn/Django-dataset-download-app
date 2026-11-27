@@ -376,11 +376,13 @@ def download_dataset(request, file_name=None):
     Serve one dataset file and record the download.
 
     ``file_name`` is the trailing component of the public URL
-    (``/file/<name>.<ext>``); it is lowercased and matched against
-    ``_DOWNLOAD_FILENAME_RE`` (``^[a-z0-9-]+\\.[a-z]{3,4}$``) before any
-    DB lookup, so a stray dot, an upper-case letter, or a missing
-    extension returns 404 instead of crashing with a ``ValueError``. The
-    base name resolves to ``Dataset.slug``; the extension (folded through
+    (``/file/<name>.<ext>``); it is lowercased first and then matched
+    against ``_DOWNLOAD_FILENAME_RE`` (``^[a-z0-9-]+\\.[a-z]{3,4}$``)
+    before any DB lookup, so a stray dot or a missing extension returns
+    404 instead of crashing with a ``ValueError``. Uppercase letters in
+    the URL are *not* a 404 trigger - they are normalised by the
+    ``.lower()`` call and then pass the regex unchanged. The base name
+    resolves to ``Dataset.slug``; the extension (folded through
     ``_DOWNLOAD_EXT_ALIASES`` so the legacy ``.xls`` still hits the now-
     ``XLSX`` row) selects the matching ``DataFile``. If either lookup
     fails the view returns a 404.
